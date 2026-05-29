@@ -1,0 +1,959 @@
+{% extends "base.html" %}
+
+{% block titulo %}MigradorBD{% endblock %}
+
+{% block contenido %}
+<h2>Sistema de Migracion de Bases de Datos</h2>
+
+<div class="panel-conexiones">
+    <!-- ORIGEN -->
+    <div class="conexion-panel">
+        <h3>PASO 1: Subir Base de Datos Origen</h3>
+        <p style="color:#666; font-size:13px;">
+            Formatos soportados: .db, .sqlite, .sql, .dump, .bak, .json, .csv, .xlsx y cualquier archivo de base de datos compatible
+        </p>
+        
+        <input type="file" id="archivo-input" 
+               onchange="subirArchivo()" accept=".db,.sqlite,.sql,.dump,.bak,.json,.csv,.xlsx" style="display:none;">
+        
+        <div class="zona-subida" id="zona-subida" onclick="document.getElementById('archivo-input').click()">
+            <div style="font-size:40px;">[ Subir Archivo ]</div>
+            <p>Click para seleccionar</p>
+        </div>
+        
+        <div id="info-origen" style="display:none; margin-top:15px;"></div>
+    </div>
+    
+    <!-- DESTINO -->
+    <div class="conexion-panel">
+        <h3>PASO 2: Seleccionar Destino</h3>
+
+        <input type="hidden" id="motor-destino" value="">
+
+        <div style="display:grid; gap:14px;">
+            <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                    <strong style="color:#244a7c;">Relacionales</strong>
+                    <span style="font-size:12px; color:#6d7c92;">Salida SQL / base estructurada</span>
+                </div>
+                <div id="grupo-relacionales" style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;">
+                    <button type="button" class="motor-opcion" data-motor="SQLite">SQLite</button>
+                    <button type="button" class="motor-opcion" data-motor="PostgreSQL">PostgreSQL</button>
+                    <button type="button" class="motor-opcion" data-motor="MySQL">MySQL</button>
+                    <button type="button" class="motor-opcion" data-motor="MariaDB">MariaDB</button>
+                    <button type="button" class="motor-opcion" data-motor="Microsoft SQL Server">Microsoft SQL Server</button>
+                    <button type="button" class="motor-opcion" data-motor="Oracle">Oracle</button>
+                    <button type="button" class="motor-opcion" data-motor="Snowflake">Snowflake</button>
+                    <button type="button" class="motor-opcion" data-motor="Amazon Redshift">Amazon Redshift</button>
+                    <button type="button" class="motor-opcion" data-motor="Azure SQL Database">Azure SQL Database</button>
+                    <button type="button" class="motor-opcion" data-motor="IBM Db2">IBM Db2</button>
+                    <button type="button" class="motor-opcion" data-motor="Google BigQuery">Google BigQuery</button>
+                </div>
+            </div>
+
+            <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                    <strong style="color:#244a7c;">No relacionales</strong>
+                    <span style="font-size:12px; color:#6d7c92;">Exportación JSON / NDJSON / CQL / Redis</span>
+                </div>
+                <p style="font-size:12px; color:#6d7c92; margin:0 0 10px 0;">Incluye MongoDB Atlas y exportación para motores NoSQL populares.</p>
+                <div id="grupo-no-relacionales" style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;">
+                    <button type="button" class="motor-opcion" data-motor="MongoDB">MongoDB</button>
+                    <button type="button" class="motor-opcion" data-motor="Elasticsearch">Elasticsearch</button>
+                    <button type="button" class="motor-opcion" data-motor="Redis">Redis</button>
+                    <button type="button" class="motor-opcion" data-motor="Apache Cassandra">Apache Cassandra</button>
+                    <button type="button" class="motor-opcion" data-motor="MongoDB Atlas">MongoDB Atlas</button>
+                </div>
+            </div>
+        </div>
+        
+        <button onclick="configurarDestino()" style="margin-top:15px; padding:10px 20px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; width:100%;">
+            Configurar Destino
+        </button>
+        <span id="destino-estado" style="display:block; margin-top:10px; font-weight:bold;"></span>
+    </div>
+</div>
+
+<!-- PASO 3: MIGRACION CON PESTAÑAS -->
+<div style="background:white; padding:25px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-top:20px;">
+    <!-- Tabs de navegación -->
+    <div style="display:flex; border-bottom:2px solid #e0e0e0; margin-bottom:20px;">
+        <button onclick="cambiarTab('migracion')" id="tab-migracion" 
+            style="padding:12px 20px; background:transparent; border:none; border-bottom:3px solid #244a7c; color:#244a7c; font-weight:bold; cursor:pointer; font-size:14px;">
+            Migración
+        </button>
+        <button onclick="cambiarTab('historial')" id="tab-historial"
+            style="padding:12px 20px; background:transparent; border:none; border-bottom:3px solid transparent; color:#999; font-weight:bold; cursor:pointer; font-size:14px;">
+            Historial
+        </button>
+        <button onclick="cambiarTab('github')" id="tab-github"
+            style="padding:12px 20px; background:transparent; border:none; border-bottom:3px solid transparent; color:#999; font-weight:bold; cursor:pointer; font-size:14px;">
+            GitHub
+        </button>
+    </div>
+    
+    <!-- Tab: Migración -->
+    <div id="tab-content-migracion" style="display:block;">
+        <h3>PASO 3: Ejecutar Migracion</h3>
+        
+        <div class="metricas">
+            <div class="metrica exito">
+                <span id="stat-tablas">0</span>
+                <small>Tablas</small>
+            </div>
+            <div class="metrica info">
+                <span id="stat-extraidos">0</span>
+                <small>Extraidos</small>
+            </div>
+            <div class="metrica warning">
+                <span id="stat-cargados">0</span>
+                <small>Cargados</small>
+            </div>
+            <div class="metrica error">
+                <span id="stat-errores">0</span>
+                <small>Errores</small>
+            </div>
+        </div>
+        
+        <p id="tabla-actual" style="color:#666; margin:10px 0;">Listo para iniciar</p>
+        
+        <div style="background:#e0e0e0; height:25px; border-radius:12px; overflow:hidden; margin:10px 0;">
+            <div id="barra" style="width:0%; height:100%; background:#244a7c; transition:width 0.3s;"></div>
+        </div>
+        <p id="porcentaje" style="font-size:28px; text-align:center; color:#1a73e8;">0%</p>
+        
+        <div style="margin:15px 0;">
+            <button onclick="iniciarMigracion()" id="btn-iniciar" style="padding:12px 30px; background:#244a7c; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; margin-right:10px;">
+                Iniciar Migracion
+            </button>
+            <button onclick="pausarMigracion()" style="padding:12px 30px; background:#5f6c7b; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; margin-right:10px;">
+                Pausar
+            </button>
+            <button id="btn-crear" onclick="crearEstructura()" style="padding:12px 20px; background:#364a63; color:white; border:none; border-radius:4px; font-size:14px; margin-right:8px;">
+                Crear Tablas
+            </button>
+            <button onclick="descargar()" id="btn-descargar" style="padding:12px 30px; background:#244a7c; color:white; border:none; border-radius:4px; font-size:16px;">
+                Descargar
+            </button>
+        </div>
+        
+        <!-- LOGS -->
+        <div style="background:#1e1e1e; color:#d4d4d4; padding:10px; border-radius:4px; height:200px; overflow-y:auto; font-family:monospace; font-size:12px;" id="logs">
+            <div>Sistema listo...</div>
+        </div>
+    </div>
+    
+    <!-- Tab: Historial -->
+    <div id="tab-content-historial" style="display:none;">
+        <h3>Historial de Migraciones</h3>
+        <div id="historial-container" style="max-height:600px; overflow-y:auto;">
+            <p style="text-align:center; color:#999; padding:40px;">Cargando historial...</p>
+        </div>
+    </div>
+
+    <!-- Tab: GitHub -->
+    <div id="tab-content-github" style="display:none;">
+        <h3>GitHub</h3>
+        <p style="color:#666; margin-bottom:15px;">
+            Conecta tu cuenta de GitHub, elige uno de tus repositorios y sube solo tus archivos personales.
+        </p>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+            <div style="padding:10px 14px; background:#edf2f7; border-radius:999px; color:#244a7c; font-size:13px; font-weight:bold;">
+                Archivos visibles: <span id="github-archivos-contador">0</span>
+            </div>
+            <div style="padding:10px 14px; background:#edf2f7; border-radius:999px; color:#244a7c; font-size:13px;">
+                Solo se muestran archivos subidos por tu usuario
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+            <a href="/auth/github" style="padding:10px 16px; background:#244a7c; color:white; text-decoration:none; border-radius:4px; font-weight:bold;">Conectar GitHub</a>
+            <button onclick="cargarGitHubData()" style="padding:10px 16px; background:#5f6c7b; color:white; border:none; border-radius:4px; cursor:pointer;">Actualizar repositorios</button>
+        </div>
+        
+        <div style="background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px; padding:16px; margin-bottom:16px;">
+            <h4 style="margin-top:0;">Crear repositorio nuevo</h4>
+            <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:10px; align-items:end;">
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Nombre</label>
+                    <input id="github-nuevo-repo-nombre" type="text" placeholder="mi-repo-migracion" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Descripción</label>
+                    <input id="github-nuevo-repo-desc" type="text" placeholder="Repositorio para backups migrados" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; padding-bottom:2px;">
+                    <div style="min-width:130px;">
+                        <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Visibilidad</label>
+                        <select id="github-nuevo-repo-visibilidad" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
+                            <option value="privado" selected>Privado</option>
+                            <option value="publico">Público</option>
+                        </select>
+                    </div>
+                    <button onclick="crearRepoGithub()" style="padding:10px 16px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Crear repo</button>
+                </div>
+            </div>
+            <div id="github-crear-repo-resultado" style="margin-top:12px; font-size:13px; color:#333;"></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1.1fr 0.9fr; gap:16px;">
+            <div style="background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px; padding:16px;">
+                <h4 style="margin-top:0;">Repositorios del usuario</h4>
+                <div id="github-repos-container" style="max-height:320px; overflow-y:auto;">
+                    <p style="color:#999;">Pulsa "Actualizar repositorios" para cargar tu lista.</p>
+                </div>
+            </div>
+
+            <div style="background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px; padding:16px;">
+                <h4 style="margin-top:0;">Subir archivo</h4>
+
+                <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Repositorio</label>
+                <select id="github-repo" onchange="sincronizarBranchRepo()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; margin-bottom:12px;">
+                    <option value="">Cargando repositorios...</option>
+                </select>
+
+                <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Tus archivos subidos</label>
+                <select id="github-archivo" onchange="autocompletarPathGithub()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; margin-bottom:12px;">
+                    <option value="">Cargando archivos...</option>
+                </select>
+
+                <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Ruta en el repositorio</label>
+                <input id="github-path" type="text" placeholder="backups/archivo.sql" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; margin-bottom:12px;">
+
+                <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Rama</label>
+                <input id="github-branch" type="text" value="main" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; margin-bottom:12px;">
+
+                <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Mensaje del commit</label>
+                <input id="github-mensaje" type="text" value="Subida desde MigradorBD" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; margin-bottom:12px;">
+
+                <button onclick="subirArchivoGithub()" style="width:100%; padding:12px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">
+                    Subir y compartir
+                </button>
+
+                <div id="github-resultado" style="margin-top:14px; font-size:13px; color:#333;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.panel-conexiones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 20px;
+}
+.conexion-panel {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.zona-subida {
+    border: 2px dashed #1a73e8;
+    padding: 40px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #f8f9fa;
+}
+.zona-subida:hover {
+    background: #edf2f7;
+}
+.metricas {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.metrica {
+    text-align: center;
+    padding: 10px;
+    border-radius: 6px;
+}
+.metrica span {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+}
+.metrica small {
+    color: #666;
+    font-size: 11px;
+}
+.metrica.exito { background: #edf2f7; }
+.metrica.exito span { color: #244a7c; }
+.metrica.info { background: #edf2f7; }
+.metrica.info span { color: #244a7c; }
+.metrica.warning { background: #edf2f7; }
+.metrica.warning span { color: #244a7c; }
+.metrica.error { background: #edf2f7; }
+.metrica.error span { color: #244a7c; }
+.motor-opcion {
+    padding: 12px 14px;
+    border: 1px solid #d8dee9;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #1f2937;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.18s ease;
+}
+.motor-opcion:hover {
+    border-color: #244a7c;
+    box-shadow: 0 4px 12px rgba(36, 74, 124, 0.08);
+    transform: translateY(-1px);
+}
+.motor-opcion.activo {
+    border-color: #244a7c;
+    background: linear-gradient(180deg, #eff5ff, #ffffff);
+    color: #244a7c;
+    box-shadow: 0 0 0 2px rgba(36, 74, 124, 0.12) inset;
+}
+</style>
+
+<script>
+const socket = io();
+let migracionActiva = false;
+let intervaloEstado = null;
+let motorDestinoSeleccionado = '';
+socket.on('connect', () => socket.emit('conectar'));
+
+function marcarMotorSeleccionado(motor) {
+    const inputMotor = document.getElementById('motor-destino');
+    if (inputMotor) {
+        inputMotor.value = motor || '';
+    }
+
+    document.querySelectorAll('.motor-opcion').forEach((btn) => {
+        btn.classList.toggle('activo', btn.dataset.motor === motor);
+    });
+
+    if (motor) {
+        const destinoEstado = document.getElementById('destino-estado');
+        if (destinoEstado) {
+            destinoEstado.textContent = 'Destino seleccionado: ' + motor;
+            destinoEstado.style.color = '#244a7c';
+        }
+    }
+}
+
+document.addEventListener('click', (event) => {
+    const boton = event.target.closest('.motor-opcion');
+    if (!boton) return;
+    marcarMotorSeleccionado(boton.dataset.motor || '');
+});
+
+// Recuperar estado al cargar
+window.onload = async function() {
+    try {
+        const resp = await fetch('/api/estado');
+        const datos = await resp.json();
+        
+        if (datos.estado === 'exito') {
+            document.getElementById('info-origen').style.display = 'block';
+            document.getElementById('info-origen').innerHTML = `
+                <p style="color:#244a7c;">Archivo cargado: ${datos.tipo_detectado}</p>
+                <p>${datos.total_tablas} tablas detectadas</p>
+            `;
+            document.getElementById('zona-subida').innerHTML = `
+                <div style="padding:40px; color:#244a7c;">
+                    <div style="font-size:40px;">[ Listo ]</div>
+                    <p>${datos.tipo_detectado} - ${datos.total_tablas} tablas</p>
+                </div>`;
+            
+            if (datos.motor_destino) {
+                marcarMotorSeleccionado(datos.motor_destino);
+            }
+            
+            if (datos.metricas && datos.metricas.tablas_ok > 0) {
+                actualizarMetricas(datos.metricas);
+                document.getElementById('porcentaje').textContent = '100%';
+                document.getElementById('barra').style.width = '100%';
+            }
+        }
+    } catch(e) {}
+};
+
+socket.on('progreso', (datos) => {
+    document.getElementById('barra').style.width = datos.porcentaje + '%';
+    document.getElementById('porcentaje').textContent = datos.porcentaje + '%';
+    document.getElementById('tabla-actual').textContent = datos.estado;
+    if (datos.metricas) actualizarMetricas(datos.metricas);
+});
+
+socket.on('log', (datos) => {
+    const logs = document.getElementById('logs');
+    const hora = new Date().toLocaleTimeString();
+    const item = document.createElement('div');
+    item.textContent = '[' + hora + '] ' + datos.mensaje;
+            if (datos.tipo === 'error') item.style.color = '#244a7c';
+    logs.appendChild(item);
+    logs.scrollTop = logs.scrollHeight;
+});
+
+socket.on('migracion_completada', (m) => {
+    migracionActiva = false;
+    if (intervaloEstado) {
+        clearInterval(intervaloEstado);
+        intervaloEstado = null;
+    }
+    const btn = document.getElementById('btn-iniciar');
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Iniciar Migracion';
+    }
+    actualizarMetricas(m);
+    const logs = document.getElementById('logs');
+    if (logs) {
+        const item = document.createElement('div');
+        item.textContent = '[sistema] Migración completada';
+        logs.appendChild(item);
+        logs.scrollTop = logs.scrollHeight;
+    }
+    // Recargar historial automáticamente
+    cargarHistorial();
+});
+
+socket.on('limpiar_interfaz', () => {
+    document.getElementById('barra').style.width = '0%';
+    document.getElementById('porcentaje').textContent = '0%';
+    document.getElementById('tabla-actual').textContent = 'Listo para iniciar';
+    document.getElementById('stat-tablas').textContent = '0';
+    document.getElementById('stat-extraidos').textContent = '0';
+    document.getElementById('stat-cargados').textContent = '0';
+    document.getElementById('stat-errores').textContent = '0';
+    document.getElementById('info-origen').style.display = 'none';
+    document.getElementById('info-origen').innerHTML = '';
+    document.getElementById('zona-subida').innerHTML = '<div style="font-size:40px;">[ Subir Archivo ]</div><p>Click para seleccionar</p>';
+    document.getElementById('archivo-input').value = '';
+    document.getElementById('motor-destino').value = '';
+    document.getElementById('destino-estado').textContent = 'Listo para una nueva migración';
+    document.getElementById('btn-iniciar').disabled = true;
+    document.getElementById('btn-pausar').disabled = true;
+    document.getElementById('btn-crear').disabled = true;
+    document.getElementById('btn-descargar').disabled = !motorDestinoSeleccionado;
+});
+
+socket.on('disconnect', () => {
+    migracionActiva = false;
+    if (intervaloEstado) {
+        clearInterval(intervaloEstado);
+        intervaloEstado = null;
+    }
+    const logs = document.getElementById('logs');
+    if (logs) {
+        const item = document.createElement('div');
+        item.textContent = '[conexion] Se perdió la conexión en tiempo real';
+        item.style.color = '#244a7c';
+        logs.appendChild(item);
+    }
+});
+
+function actualizarMetricas(m) {
+    document.getElementById('stat-tablas').textContent = m.tablas_ok || 0;
+    document.getElementById('stat-extraidos').textContent = m.extraidos || 0;
+    document.getElementById('stat-cargados').textContent = m.cargados || 0;
+    document.getElementById('stat-errores').textContent = m.errores || 0;
+}
+
+async function subirArchivo() {
+    const archivo = document.getElementById('archivo-input').files[0];
+    if (!archivo) return;
+    
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    
+    document.getElementById('zona-subida').innerHTML = '<p style="padding:40px;">Analizando...</p>';
+    
+    try {
+        const resp = await fetch('/api/subir-archivo', { method: 'POST', body: formData });
+        let datos = null;
+        try {
+            datos = await resp.json();
+        } catch (parseErr) {
+            const txt = await resp.text().catch(() => null);
+            alert('Error al subir archivo: ' + (txt || parseErr.message));
+            document.getElementById('zona-subida').innerHTML = '<div style="padding:40px; color:#244a7c;">[Error]</div>';
+            return;
+        }
+
+        if (datos && datos.estado === 'exito') {
+            document.getElementById('info-origen').style.display = 'block';
+            document.getElementById('info-origen').innerHTML = `
+                <p style="color:#244a7c;">Archivo: ${datos.nombre_archivo}</p>
+                <p>Tipo: ${datos.tipo_detectado}</p>
+                <p>Tablas: ${datos.total_tablas}</p>
+            `;
+            document.getElementById('zona-subida').innerHTML = `
+                <div style="padding:40px; color:#244a7c;">
+                    <div style="font-size:40px;">[ OK ]</div>
+                    <p>${datos.tipo_detectado}</p>
+                </div>`;
+        } else if (datos) {
+            alert(datos.mensaje || 'Error desconocido');
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function configurarDestino() {
+    const motor = document.getElementById('motor-destino').value;
+    if (!motor) { alert('Seleccione un motor'); return; }
+    
+    document.getElementById('destino-estado').textContent = 'Configurando...';
+    actualizarBotonDescargar(motor);
+    
+    try {
+        const resp = await fetch('/api/configurar-destino', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({motor_destino: motor})
+        });
+        const datos = await resp.json();
+        if (datos.estado === 'exito') {
+            motorDestinoSeleccionado = motor;
+            document.getElementById('btn-crear').disabled = false;
+            document.getElementById('btn-descargar').disabled = false;
+        }
+        
+        document.getElementById('destino-estado').textContent = datos.mensaje;
+        document.getElementById('destino-estado').style.color = '#244a7c';
+    } catch(e) {
+        document.getElementById('destino-estado').textContent = 'Error';
+    }
+}
+
+function actualizarBotonDescargar(motor) {
+    const btn = document.getElementById('btn-descargar');
+    if (!btn) return;
+    
+    if (/sqlite/i.test(motor)) {
+        btn.textContent = 'Descargar';
+        btn.style.background = '#244a7c';
+    } else if (/mysql|mariadb|postgre|sql server|oracle|snowflake|redshift|db2|azure sql|bigquery/i.test(motor)) {
+        btn.textContent = 'Descargar';
+        btn.style.background = '#244a7c';
+    } else if (/mongo/i.test(motor)) {
+        btn.textContent = 'Descargar';
+        btn.style.background = '#244a7c';
+    } else if (/redis|cassandra|elasticsearch/i.test(motor)) {
+        btn.textContent = 'Descargar';
+        btn.style.background = '#244a7c';
+    } else {
+        btn.textContent = 'Descargar';
+        btn.style.background = '#244a7c';
+    }
+}
+
+async function iniciarMigracion() {
+    const btn = document.getElementById('btn-iniciar');
+    const logs = document.getElementById('logs');
+    if (migracionActiva) return;
+    migracionActiva = true;
+    btn.disabled = true;
+    btn.textContent = 'Migrando...';
+
+    if (logs) {
+        const item = document.createElement('div');
+        item.textContent = '[sistema] Iniciando migración...';
+        logs.appendChild(item);
+        logs.scrollTop = logs.scrollHeight;
+    }
+    
+    try {
+        const resp = await fetch('/api/iniciar-migracion', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const datos = await resp.json();
+        if (datos.estado !== 'exito') {
+            alert(datos.mensaje);
+            migracionActiva = false;
+            btn.disabled = false;
+            btn.textContent = 'Iniciar Migracion';
+        } else {
+            iniciarSeguimientoEstado();
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+        migracionActiva = false;
+        btn.disabled = false;
+        btn.textContent = 'Iniciar Migracion';
+    }
+}
+
+function iniciarSeguimientoEstado() {
+    if (intervaloEstado) return;
+    intervaloEstado = setInterval(async () => {
+        try {
+            const resp = await fetch('/api/estado');
+            const datos = await resp.json();
+            if (datos.estado !== 'exito') return;
+
+            if (datos.metricas) actualizarMetricas(datos.metricas);
+
+            if (!datos.proceso_activo && migracionActiva) {
+                migracionActiva = false;
+                const btn = document.getElementById('btn-iniciar');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Iniciar Migracion';
+                }
+                if (intervaloEstado) {
+                    clearInterval(intervaloEstado);
+                    intervaloEstado = null;
+                }
+
+                const logs = document.getElementById('logs');
+                if (logs) {
+                    const item = document.createElement('div');
+                    item.textContent = '[sistema] Migración finalizada desde seguimiento de estado';
+                    logs.appendChild(item);
+                    logs.scrollTop = logs.scrollHeight;
+                }
+                // Recargar historial automáticamente
+                cargarHistorial();
+            }
+        } catch (e) {
+            // no bloquear la UI si el polling falla temporalmente
+        }
+    }, 1000);
+}
+
+async function pausarMigracion() {
+    await fetch('/api/pausar', {method:'POST', headers:{'Content-Type':'application/json'}});
+    document.getElementById('btn-iniciar').disabled = false;
+    document.getElementById('btn-iniciar').textContent = 'Reanudar';
+}
+
+async function crearEstructura() {
+    const btn = document.getElementById('btn-crear');
+    if (btn) btn.disabled = true;
+    try {
+        const resp = await fetch('/api/crear-estructura', {method: 'POST', headers: {'Content-Type':'application/json'}});
+        const datos = await resp.json();
+        alert(datos.mensaje || JSON.stringify(datos));
+    } catch (e) {
+        alert('Error: ' + e.message);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function _getFilenameFromDisposition(disposition) {
+    if (!disposition) return null;
+    const match = /filename\*?=(?:UTF-8'')?"?([^;"']+)"?/.exec(disposition);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function _downloadBlobResponse(resp, fallbackName) {
+    const ctype = resp.headers.get('content-type') || '';
+    if (ctype.includes('application/json')) {
+        try { const j = await resp.json(); alert(j.mensaje || JSON.stringify(j)); return; } catch(e) { alert('Error descargando'); return; }
+    }
+    if (!resp.ok) { alert('Error descargando archivo'); return; }
+    const blob = await resp.blob();
+    const disp = resp.headers.get('Content-Disposition') || resp.headers.get('content-disposition');
+    let filename = _getFilenameFromDisposition(disp) || fallbackName || 'resultado.bin';
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+}
+
+async function descargar() {
+    const motor = document.getElementById('motor-destino').value || motorDestinoSeleccionado || '';
+    if (!motor) { alert('Seleccione un motor destino primero'); return; }
+    
+    document.getElementById('btn-descargar').disabled = true;
+    try {
+        const resp = await fetch('/api/descargar?motor=' + encodeURIComponent(motor));
+        
+        // Determinar extensión según motor
+        let ext = '.bin';
+        if (/sqlite/i.test(motor)) {
+            ext = '.db';
+        } else if (/mysql|mariadb|postgre|sql server|oracle|snowflake|redshift|db2|azure sql|bigquery/i.test(motor)) {
+            ext = '.sql';
+        } else if (/mongo/i.test(motor)) {
+            ext = '.json';
+        } else if (/redis|cassandra|elasticsearch/i.test(motor)) {
+            ext = '.json';
+        }
+        
+        const fallback = 'migracion' + ext;
+        await _downloadBlobResponse(resp, fallback);
+    } finally {
+        document.getElementById('btn-descargar').disabled = false;
+    }
+}
+
+// Funciones para gestionar pestañas
+function cambiarTab(tab) {
+    // Ocultar todas las pestañas
+    document.getElementById('tab-content-migracion').style.display = 'none';
+    document.getElementById('tab-content-historial').style.display = 'none';
+    document.getElementById('tab-content-github').style.display = 'none';
+    
+    // Mostrar pestaña seleccionada
+    document.getElementById('tab-content-' + tab).style.display = 'block';
+    
+    // Actualizar estilos de botones
+    document.getElementById('tab-migracion').style.borderBottomColor = tab === 'migracion' ? '#244a7c' : 'transparent';
+    document.getElementById('tab-migracion').style.color = tab === 'migracion' ? '#244a7c' : '#6d7c92';
+    
+    document.getElementById('tab-historial').style.borderBottomColor = tab === 'historial' ? '#244a7c' : 'transparent';
+    document.getElementById('tab-historial').style.color = tab === 'historial' ? '#244a7c' : '#6d7c92';
+
+    document.getElementById('tab-github').style.borderBottomColor = tab === 'github' ? '#244a7c' : 'transparent';
+    document.getElementById('tab-github').style.color = tab === 'github' ? '#244a7c' : '#6d7c92';
+    
+    // Cargar historial cuando se abre la pestaña
+    if (tab === 'historial') {
+        cargarHistorial();
+    }
+
+    if (tab === 'github') {
+        cargarGitHubData();
+    }
+}
+
+let githubReposCache = [];
+let githubArchivosCache = [];
+
+function autocompletarPathGithub() {
+    const archivo = document.getElementById('github-archivo').value;
+    const path = document.getElementById('github-path');
+    if (archivo && path && (!path.value || path.value === archivo)) {
+        path.value = archivo;
+    }
+}
+
+function sincronizarBranchRepo() {
+    const repoNombre = document.getElementById('github-repo').value;
+    const repo = githubReposCache.find(r => r.full_name === repoNombre);
+    const branch = document.getElementById('github-branch');
+    if (repo && branch) {
+        branch.value = repo.default_branch || 'main';
+    }
+}
+
+async function cargarGitHubData() {
+    const reposContainer = document.getElementById('github-repos-container');
+    const repoSelect = document.getElementById('github-repo');
+    const archivoSelect = document.getElementById('github-archivo');
+    const resultado = document.getElementById('github-resultado');
+    const contadorArchivos = document.getElementById('github-archivos-contador');
+
+    if (resultado) resultado.textContent = 'Cargando datos de GitHub...';
+
+    try {
+        const [reposResp, archivosResp] = await Promise.all([
+            fetch('/api/github/repos'),
+            fetch('/api/github/archivos-locales')
+        ]);
+
+        const reposData = await reposResp.json();
+        const archivosData = await archivosResp.json();
+
+        if (reposData.estado === 'exito') {
+            githubReposCache = reposData.repos || [];
+            repoSelect.innerHTML = githubReposCache.length
+                ? githubReposCache.map(r => `<option value="${r.full_name}">${r.full_name}${r.private ? ' (privado)' : ''}</option>`).join('')
+                : '<option value="">No hay repositorios visibles</option>';
+
+            reposContainer.innerHTML = githubReposCache.length
+                ? githubReposCache.map(r => `
+                    <div style="background:white; border:1px solid #e5e7eb; border-radius:6px; padding:10px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                            <div>
+                                <strong>${r.full_name}</strong>
+                                <div style="font-size:12px; color:#666;">${r.description || 'Sin descripción'}</div>
+                            </div>
+                            <a href="${r.html_url}" target="_blank" rel="noopener" style="color:#244a7c; text-decoration:none; font-size:13px;">Abrir</a>
+                        </div>
+                    </div>
+                `).join('')
+                : '<p style="color:#999;">No se encontraron repositorios. Conecta GitHub o refresca la lista.</p>';
+
+            sincronizarBranchRepo();
+        } else {
+            repoSelect.innerHTML = '<option value="">Conecta GitHub para ver repositorios</option>';
+            reposContainer.innerHTML = `<p style="color:#244a7c;">${reposData.mensaje || 'No fue posible cargar repositorios.'}</p>`;
+        }
+
+        if (archivosData.estado === 'exito') {
+            githubArchivosCache = archivosData.archivos || [];
+            if (contadorArchivos) contadorArchivos.textContent = String(githubArchivosCache.length);
+            archivoSelect.innerHTML = githubArchivosCache.length
+                ? githubArchivosCache.map(a => `<option value="${a.nombre}">${a.nombre} (${a.tamano} bytes)</option>`).join('')
+                : '<option value="">No tienes archivos subidos</option>';
+            if (githubArchivosCache.length) {
+                autocompletarPathGithub();
+            }
+        } else {
+            if (contadorArchivos) contadorArchivos.textContent = '0';
+            archivoSelect.innerHTML = '<option value="">Error cargando archivos</option>';
+        }
+
+        if (resultado) resultado.textContent = 'Listo para subir archivos.';
+    } catch (error) {
+        if (contadorArchivos) contadorArchivos.textContent = '0';
+        if (resultado) resultado.textContent = 'Error: ' + error.message;
+    }
+}
+
+async function crearRepoGithub() {
+    const nombre = document.getElementById('github-nuevo-repo-nombre').value.trim();
+    const descripcion = document.getElementById('github-nuevo-repo-desc').value.trim();
+    const visibilidad = document.getElementById('github-nuevo-repo-visibilidad').value;
+    const resultado = document.getElementById('github-crear-repo-resultado');
+
+    if (!nombre) {
+        resultado.textContent = 'Indica un nombre para el repositorio.';
+        return;
+    }
+
+    resultado.textContent = 'Creando repositorio...';
+
+    try {
+        const resp = await fetch('/api/github/crear-repo', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ nombre, descripcion, privado: visibilidad })
+        });
+
+        const datos = await resp.json();
+        if (datos.estado === 'exito') {
+            const repo = datos.repo || {};
+            resultado.innerHTML = `
+                <div style="padding:10px; background:#edf2f7; border-radius:6px;">
+                    <div style="color:#244a7c; font-weight:bold; margin-bottom:6px;">${datos.mensaje}</div>
+                    ${repo.html_url ? `<a href="${repo.html_url}" target="_blank" rel="noopener" style="word-break:break-all; color:#244a7c;">${repo.html_url}</a>` : ''}
+                </div>
+            `;
+            await cargarGitHubData();
+            if (repo.full_name) {
+                document.getElementById('github-repo').value = repo.full_name;
+                sincronizarBranchRepo();
+            }
+        } else {
+            resultado.textContent = datos.mensaje || 'No se pudo crear el repositorio';
+        }
+    } catch (error) {
+        resultado.textContent = 'Error: ' + error.message;
+    }
+}
+
+async function subirArchivoGithub() {
+    const repo = document.getElementById('github-repo').value;
+    const archivo = document.getElementById('github-archivo').value;
+    const path = document.getElementById('github-path').value.trim();
+    const branch = document.getElementById('github-branch').value.trim();
+    const mensaje = document.getElementById('github-mensaje').value.trim();
+    const resultado = document.getElementById('github-resultado');
+
+    if (!repo) {
+        resultado.textContent = 'Selecciona un repositorio.';
+        return;
+    }
+    if (!archivo) {
+        resultado.textContent = 'Selecciona un archivo de uploads/.';
+        return;
+    }
+
+    resultado.textContent = 'Subiendo a GitHub...';
+
+    try {
+        const resp = await fetch('/api/github/subir', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ repo, archivo, path: path || archivo, branch, mensaje })
+        });
+
+        const datos = await resp.json();
+        if (datos.estado === 'exito') {
+            const enlace = datos.url || '';
+            resultado.innerHTML = `
+                <div style="padding:10px; background:#edf2f7; border-radius:6px;">
+                    <div style="color:#244a7c; font-weight:bold; margin-bottom:6px;">${datos.mensaje}</div>
+                    ${enlace ? `<a href="${enlace}" target="_blank" rel="noopener" style="word-break:break-all; color:#244a7c;">${enlace}</a>` : ''}
+                    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                        ${enlace ? `<button onclick="navigator.clipboard.writeText('${enlace}')" style="padding:8px 12px; background:#5f6c7b; color:white; border:none; border-radius:4px; cursor:pointer;">Copiar enlace</button>` : ''}
+                        ${enlace ? `<a href="${enlace}" target="_blank" rel="noopener" style="padding:8px 12px; background:#244a7c; color:white; text-decoration:none; border-radius:4px;">Abrir</a>` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            resultado.textContent = datos.mensaje || 'Error subiendo archivo';
+        }
+    } catch (error) {
+        resultado.textContent = 'Error: ' + error.message;
+    }
+}
+
+async function cargarHistorial() {
+    try {
+        const resp = await fetch('/api/historial');
+        const datos = await resp.json();
+        const container = document.getElementById('historial-container');
+        
+        if (!datos.historial || datos.historial.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#999; padding:40px;">No hay migraciones registradas todavía.</p>';
+            return;
+        }
+        
+        let html = '';
+        // Mostrar en orden inverso (más recientes primero)
+        datos.historial.slice().reverse().forEach((migracion, idx) => {
+            const fecha = new Date(migracion.timestamp).toLocaleString();
+            const duracion = migracion.duracion_segundos ? migracion.duracion_segundos.toFixed(2) : '—';
+            const estado = migracion.metricas.errores === 0 ? 
+                '<span style="color:#244a7c; font-weight:bold;">✓ ÉXITO</span>' : 
+                '<span style="color:#244a7c; font-weight:bold;">✗ CON ERRORES</span>';
+            
+            html += `
+            <div style="background:#edf2f7; border-radius:6px; padding:14px; margin-bottom:12px; border-left:4px solid #244a7c;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>#${migracion.id} | ${migracion.archivo_origen} → ${migracion.motor_destino}</strong>
+                        <div style="font-size:12px; color:#888; margin-top:4px;">
+                            ${fecha} | ${migracion.ip} | Duración: ${duracion}s
+                        </div>
+                    </div>
+                    <div>${estado}</div>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;">
+                    <div style="background:white; padding:8px; border-radius:4px; text-align:center; font-size:12px;">
+                        <strong>${migracion.metricas.tablas_ok}</strong> tablas
+                    </div>
+                    <div style="background:white; padding:8px; border-radius:4px; text-align:center; font-size:12px;">
+                        <strong>${migracion.metricas.extraidos}</strong> extraídos
+                    </div>
+                    <div style="background:white; padding:8px; border-radius:4px; text-align:center; font-size:12px;">
+                        <strong>${migracion.metricas.cargados}</strong> cargados
+                    </div>
+                    <div style="background:white; padding:8px; border-radius:4px; text-align:center; font-size:12px;">
+                        <strong style="color:#244a7c;">${migracion.metricas.errores}</strong> errores
+                    </div>
+                </div>
+            </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    } catch (e) {
+        console.error('Error cargando historial:', e);
+        document.getElementById('historial-container').innerHTML = '<p style="color:#244a7c;">Error al cargar historial</p>';
+    }
+}
+</script>
+{% endblock %}

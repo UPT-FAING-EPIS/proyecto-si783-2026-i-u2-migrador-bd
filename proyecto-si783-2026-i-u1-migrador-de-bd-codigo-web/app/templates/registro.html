@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - MigradorBD</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilo.css') }}">
+    <style>
+        .contenedor-registro {
+            max-width: 450px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .contenedor-registro h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .grupo-form {
+            margin-bottom: 20px;
+        }
+        .grupo-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        .grupo-form input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .grupo-form input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76,175,80,0.3);
+        }
+        .grupo-form small {
+            display: block;
+            margin-top: 5px;
+            color: #999;
+            font-size: 12px;
+        }
+        .boton-registro {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .boton-registro:hover {
+            background-color: #45a049;
+        }
+        .enlace-login {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .enlace-login a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        .enlace-login a:hover {
+            text-decoration: underline;
+        }
+        .mensaje-error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <nav class="barra-nav">
+        <div class="contenedor-nav">
+            <a href="/" class="logo">MigradorBD</a>
+        </div>
+    </nav>
+
+    <div class="contenedor-registro">
+        <h1>Crear Cuenta</h1>
+
+        {% if error %}
+        <div class="mensaje-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('principal.registro') }}">
+            <div class="grupo-form">
+                <label for="usuario">Usuario:</label>
+                <input type="text" id="usuario" name="usuario" required minlength="3">
+                <small>Mínimo 3 caracteres</small>
+            </div>
+
+            <div class="grupo-form">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="grupo-form">
+                <label for="contraseña">Contraseña:</label>
+                <input type="password" id="contraseña" name="contraseña" required minlength="6">
+                <small>Mínimo 6 caracteres</small>
+            </div>
+
+            <div class="grupo-form">
+                <label for="confirmar">Confirmar Contraseña:</label>
+                <input type="password" id="confirmar" name="confirmar" required minlength="6">
+            </div>
+
+            <button type="submit" class="boton-registro">Registrarse</button>
+        </form>
+
+        <div class="enlace-login">
+            ¿Ya tienes cuenta? <a href="{{ url_for('principal.login') }}">Inicia sesión aquí</a>
+        </div>
+    </div>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const contraseña = document.getElementById('contraseña').value;
+            const confirmar = document.getElementById('confirmar').value;
+
+            if (contraseña !== confirmar) {
+                e.preventDefault();
+                alert('Las contraseñas no coinciden');
+            }
+        });
+    </script>
+</body>
+</html>

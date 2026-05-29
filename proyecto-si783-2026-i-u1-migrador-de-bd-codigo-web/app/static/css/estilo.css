@@ -1,0 +1,356 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7fb;
+    color: #2f3b4c;
+    min-height: 100vh;
+}
+
+/* Navegación */
+.barra-nav {
+    background-color: #244a7c;
+    padding: 0 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.contenedor-nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+}
+
+.logo {
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.enlaces-nav a {
+    color: rgba(255,255,255,0.9);
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    margin-left: 5px;
+    transition: background-color 0.3s;
+}
+
+.enlaces-nav {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.enlaces-nav a:hover, .enlaces-nav a.activo {
+    background-color: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.contenido {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+/* Hero */
+.hero {
+    text-align: center;
+    padding: 60px 0;
+}
+
+.hero h1 {
+    font-size: 36px;
+    color: #244a7c;
+    margin-bottom: 15px;
+}
+
+.descripcion {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 40px;
+}
+
+.caracteristicas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.tarjeta {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.tarjeta h3 {
+    color: #244a7c;
+    margin-bottom: 10px;
+}
+
+.tarjeta p {
+    color: #666;
+}
+
+/* Configuración */
+.pagina-config h2 {
+    margin-bottom: 25px;
+    color: #2f3b4c;
+}
+
+.panel-conexiones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.conexion-panel {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.conexion-panel h3 {
+    margin-bottom: 20px;
+    color: #244a7c;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 10px;
+}
+
+.campo {
+    margin-bottom: 15px;
+}
+
+.campo label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+}
+
+.campo input, .campo select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.campo input:focus, .campo select:focus {
+    outline: none;
+    border-color: #244a7c;
+}
+
+/* Botones */
+.boton-primario {
+    display: inline-block;
+    padding: 12px 24px;
+    background-color: #244a7c;
+    color: white;
+    text-decoration: none;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.boton-primario:hover {
+    background-color: #1d3d66;
+}
+
+.boton-secundario {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #364a63;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.boton-secundario:hover {
+    background-color: #2e3f54;
+}
+
+.boton-exito {
+    padding: 12px 24px;
+    background-color: #244a7c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.boton-exito:disabled {
+    background-color: #7b8796;
+    cursor: not-allowed;
+}
+
+.boton-advertencia {
+    padding: 12px 24px;
+    background-color: #5f6c7b;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.boton-advertencia:disabled {
+    background-color: #7b8796;
+    cursor: not-allowed;
+}
+
+.boton-info {
+    padding: 12px 24px;
+    background-color: #244a7c;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.acciones-config {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.estado {
+    display: inline-block;
+    margin-left: 10px;
+    font-weight: bold;
+}
+
+/* Migración */
+.progreso-container {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 25px;
+}
+
+.barra-progreso {
+    width: 100%;
+    height: 30px;
+    background-color: #e0e0e0;
+    border-radius: 15px;
+    overflow: hidden;
+    margin: 15px 0;
+}
+
+.barra-relleno {
+    height: 100%;
+    background: linear-gradient(90deg, #244a7c, #3b5f8a);
+    transition: width 0.5s;
+    border-radius: 15px;
+}
+
+.estadisticas {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin: 25px 0;
+}
+
+.stat {
+    text-align: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.stat.error {
+    background: #edf2f7;
+}
+
+.stat-valor {
+    display: block;
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+}
+
+.stat.error .stat-valor {
+    color: #244a7c;
+}
+
+.stat-etiqueta {
+    font-size: 14px;
+    color: #666;
+}
+
+.controles-migracion {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.logs-container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.logs {
+    height: 300px;
+    overflow-y: auto;
+    background: #1f2a38;
+    color: #e7eef7;
+    padding: 15px;
+    border-radius: 4px;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    margin-top: 10px;
+}
+
+.log-item {
+    padding: 3px 0;
+    border-bottom: 1px solid #344558;
+}
+
+.log-item.error {
+    color: #e7eef7;
+}
+
+.tablas-descubiertas {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.tablas-descubiertas table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.tablas-descubiertas th, .tablas-descubiertas td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.tablas-descubiertas th {
+    background: #edf2f7;
+    font-weight: 600;
+}

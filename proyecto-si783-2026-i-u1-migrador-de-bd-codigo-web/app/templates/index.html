@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block titulo %}Inicio - MigradorBD{% endblock %}
+
+{% block contenido %}
+<div class="hero">
+    <h1>Sistema Migrador de Bases de Datos</h1>
+    <p class="descripcion">Transfiera datos entre más de 20 motores de bases de datos de forma automática</p>
+    
+    <div class="caracteristicas">
+        <div class="tarjeta">
+            <h3>Soporte Multi-Motor</h3>
+            <p>MySQL, PostgreSQL, Oracle, MongoDB, Elasticsearch y más</p>
+        </div>
+        <div class="tarjeta">
+            <h3>Migración Automática</h3>
+            <p>Descubre esquemas y migra todas las tablas automáticamente</p>
+        </div>
+        <div class="tarjeta">
+            <h3>Monitoreo en Tiempo Real</h3>
+            <p>Vea el progreso de la migración en tiempo real</p>
+        </div>
+        <div class="tarjeta">
+            <h3>Reportes Detallados</h3>
+            <p>Obtenga reportes completos al finalizar la migración</p>
+        </div>
+    </div>
+    
+    <a href="/configuracion" class="boton-primario">Comenzar Migración</a>
+</div>
+{% endblock %}

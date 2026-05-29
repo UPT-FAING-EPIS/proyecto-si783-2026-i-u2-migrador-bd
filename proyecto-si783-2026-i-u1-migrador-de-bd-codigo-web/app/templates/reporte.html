@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block titulo %}Reporte - MigradorBD{% endblock %}
+
+{% block contenido %}
+<h2>Reporte de Migracion</h2>
+
+{% if historial %}
+    {% for item in historial %}
+    <div class="reporte-item" style="background:white; padding:20px; border-radius:8px; margin-bottom:20px;">
+        <h3>Migracion {{ loop.index }} - {{ item.fecha[:19] }}</h3>
+        <p><strong>Destino:</strong> {{ item.motor_destino }}</p>
+        
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:15px 0;">
+            <div style="text-align:center; padding:10px; background:#e8f5e9; border-radius:5px;">
+                <span style="font-size:24px; font-weight:bold;">{{ item.metricas.tablas_ok }}</span><br>
+                <small>Tablas migradas</small>
+            </div>
+            <div style="text-align:center; padding:10px; background:#e3f2fd; border-radius:5px;">
+                <span style="font-size:24px; font-weight:bold;">{{ item.metricas.extraidos }}</span><br>
+                <small>Registros extraidos</small>
+            </div>
+            <div style="text-align:center; padding:10px; background:#fff3e0; border-radius:5px;">
+                <span style="font-size:24px; font-weight:bold;">{{ item.metricas.cargados }}</span><br>
+                <small>Registros cargados</small>
+            </div>
+            <div style="text-align:center; padding:10px; background:#ffebee; border-radius:5px;">
+                <span style="font-size:24px; font-weight:bold;">{{ item.metricas.errores }}</span><br>
+                <small>Errores</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div style="text-align:center; padding:50px; background:white; border-radius:8px;">
+        <p style="color:#999; font-size:18px;">No hay migraciones realizadas todavia</p>
+        <a href="/configuracion" class="boton-azul">Iniciar una migracion</a>
+    </div>
+{% endif %}
+{% endblock %}

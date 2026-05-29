@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block titulo %}Monitoreo IP - MigradorBD{% endblock %}
+
+{% block contenido %}
+<h2>Monitoreo de Direcciones IP</h2>
+<p style="color:#666; margin-bottom:20px;">
+    Registro de todas las conexiones entrantes al sistema, con fecha, hora, IP, usuario y actividad asociada.
+</p>
+
+<div style="background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:30px;">
+    {% if ips %}
+    <!-- Resumen por IP -->
+    <div style="padding:20px; border-bottom:1px solid #e0e0e0;">
+        <h3 style="margin:0 0 12px;">Resumen de IPs únicas</h3>
+        <div id="resumen-ips" style="display:flex; flex-wrap:wrap; gap:10px;">
+            {% set ip_counts = {} %}
+            {% for entrada in ips %}
+                {% if entrada.ip in ip_counts %}
+                    {% set _ = ip_counts.update({entrada.ip: ip_counts[entrada.ip] + 1}) %}
+                {% else %}
+                    {% set _ = ip_counts.update({entrada.ip: 1}) %}
+                {% endif %}
+            {% endfor %}
+            {% for ip_addr, cantidad in ip_counts.items() %}
+            <div style="background:#e3f2fd; border-radius:6px; padding:8px 14px; font-size:13px;">
+                <strong>{{ ip_addr }}</strong>
+                <span style="color:#888; margin-left:6px;">{{ cantidad }} acceso{{ 's' if cantidad != 1 else '' }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Tabla de accesos -->
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+            <tr style="background:#f5f5f5;">
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">#</th>
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">IP</th>
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Usuario</th>
+                <th style="padding:10px 14px; text-align:center; border-bottom:1px solid #e0e0e0;">Accesos</th>
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Fecha</th>
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Hora (Última)</th>
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Actividad</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entrada in ips|reverse %}
+            <tr style="border-bottom:1px solid #f0f0f0;">
+                <td style="padding:8px 14px; color:#aaa;">{{ loop.index }}</td>
+                <td style="padding:8px 14px;"><code style="background:#f5f5f5; padding:2px 6px; border-radius:3px;">{{ entrada.ip }}</code></td>
+                <td style="padding:8px 14px;">{{ entrada.usuario or 'anónimo' }}</td>
+                <td style="padding:8px 14px; text-align:center;">
+                    <span style="background:#e3f2fd; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold;">{{ entrada.get('accesos', 1) }}</span>
+                </td>
+                <td style="padding:8px 14px; white-space:nowrap;">{{ entrada.fecha }}</td>
+                <td style="padding:8px 14px; white-space:nowrap;">{{ entrada.hora }}</td>
+                <td style="padding:8px 14px; color:#555;">{{ entrada.actividad }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align:center; color:#999; padding:40px;">No hay registros de acceso todavía.</p>
+    {% endif %}
+</div>
+
+<div style="text-align:right; margin-bottom:20px;">
+    <button onclick="location.reload()" style="padding:8px 20px; background:#2196F3; color:white; border:none; border-radius:4px; cursor:pointer; font-size:14px;">
+        &#8635; Actualizar
+    </button>
+</div>
+
+<script>
+// Refrescar automáticamente cada 15 s
+setTimeout(() => location.reload(), 15000);
+</script>
+{% endblock %}

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}Migrador de Bases de Datos{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilo.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔄</text></svg>">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        .usuario-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .usuario-nombre {
+            font-size: 14px;
+            color: #666;
+        }
+        .rol-badge {
+            background-color: #d32f2f;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .rol-badge.usuario {
+            background-color: #2196F3;
+        }
+        .enlace-logout {
+            color: #d32f2f;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+        .enlace-logout:hover {
+            text-decoration: underline;
+        }
+        .enlaces-admin {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <nav class="barra-nav">
+        <div class="contenedor-nav">
+            <a href="/" class="logo">MigradorBD</a>
+            <div class="enlaces-nav">
+                {% if session.usuario_id %}
+                    <a href="/" class="{% if request.path == '/' %}activo{% endif %}">Inicio</a>
+                    <a href="/migracion" class="{% if request.path == '/migracion' %}activo{% endif %}">Migración</a>
+                    {% if session.rol == 'admin' %}
+                        <a href="/monitoreo-ip" class="{% if request.path == '/monitoreo-ip' %}activo{% endif %}">Monitoreo IP</a>
+                        <a href="/admin" class="{% if request.path == '/admin' %}activo{% endif %}">Administración</a>
+                    {% endif %}
+                    <a href="/historial" class="{% if request.path == '/historial' %}activo{% endif %}">Historial</a>
+
+                    <div class="enlaces-admin">
+                        <div class="usuario-info">
+                            <span class="usuario-nombre">{{ session.usuario }}</span>
+                            <span class="rol-badge {% if session.rol == 'admin' %}admin{% else %}usuario{% endif %}">
+                                {{ session.rol.upper() }}
+                            </span>
+                        </div>
+                        <a href="/logout" class="enlace-logout">Salir</a>
+                    </div>
+                {% else %}
+                    <a href="/login" class="{% if request.path == '/login' %}activo{% endif %}">Iniciar Sesión</a>
+                    <a href="/registro" class="{% if request.path == '/registro' %}activo{% endif %}">Registrarse</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="contenido">
+        {% block contenido %}{% endblock %}
+    </main>
+</body>
+</html>

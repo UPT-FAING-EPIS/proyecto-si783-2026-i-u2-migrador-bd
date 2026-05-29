@@ -1,0 +1,54 @@
+# Configuracion del sistema web
+servidor:
+  host: "0.0.0.0"
+  puerto: 5000
+  debug: false
+  secreto: "cambiar-por-valor-seguro"
+
+# Lista de bases de datos soportadas
+bases_datos_soportadas:
+  - MySQL
+  - Oracle
+  - Microsoft SQL Server
+  - PostgreSQL
+  - Apache Cassandra
+  - CockroachDB
+  - Nuob DB
+  - Yugabyte DB
+  - ZODB
+  - ObjectDB
+  - Cache
+  - db4o
+  - MongoDB
+  - Apache CouchDB
+  - MarkLogic
+  - Elasticsearch
+  - Cosmos DB
+  - Redis
+  - Amazon DynamoDB
+  - BoltDB
+  - Aerospike
+
+# Configuracion de migracion por defecto
+migracion:
+  tamano_lote_extraccion: 1000
+  tamano_lote_carga: 500
+  reintentos_maximos: 3
+  tiempo_espera_reintento: 5
+  usar_upsert: true
+  validar_post_carga: true
+
+# Configuracion de logging
+logging:
+  nivel: "INFO"
+  formato: "json"
+  archivo: "migracion_web.log"
+  directorio: "logs"
+  max_bytes: 10485760
+  backups: 5
+
+# Configuracion de sesiones
+sesion:
+  tipo: "filesystem"
+  directorio: "sesiones"
+  duracion_horas: 24

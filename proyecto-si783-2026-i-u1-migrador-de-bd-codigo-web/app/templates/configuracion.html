@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block titulo %}Configuracion - MigradorBD{% endblock %}
+
+{% block contenido %}
+<h2>Configurar Migracion</h2>
+
+<div class="panel-conexiones">
+    <!-- ORIGEN -->
+    <div class="conexion-panel">
+        <h3>BASE DE DATOS ORIGEN</h3>
+        <p style="color:#666; margin-bottom:15px;">
+            Suba su archivo de base de datos. El sistema detectará automáticamente el tipo.<br>
+            Formatos soportados: .db, .sqlite, .sql, .dump, .json, .csv, .xlsx y cualquier archivo de base de datos compatible.
+        </p>
+        
+        <input type="file" id="archivo-input" 
+               onchange="subirArchivo()" style="display:none;">
+        
+        <div class="zona-subida" id="zona-subida" onclick="document.getElementById('archivo-input').click()">
+            <div style="font-size:48px;">&#128194;</div>
+            <p>Click para seleccionar archivo</p>
+        </div>
+        
+        <div id="info-origen" style="display:none; margin-top:15px;"></div>
+    </div>
+    
+    <!-- DESTINO -->
+    <div class="conexion-panel">
+        <h3>BASE DE DATOS DESTINO</h3>
+        
+        <div class="campo">
+            <label>Motor de destino:</label>
+            <select id="motor-destino">
+                <option value="">Seleccionar...</option>
+                <option value="SQLite">SQLite</option>
+                <option value="PostgreSQL">PostgreSQL</option>
+                <option value="MySQL">MySQL</option>
+                <option value="Microsoft SQL Server">Microsoft SQL Server</option>
+                <option value="Oracle">Oracle</option>
+                <option value="MongoDB">MongoDB</option>
+                <option value="Redis">Redis</option>
+                <option value="Elasticsearch">Elasticsearch</option>
+                <option value="Apache Cassandra">Apache Cassandra</option>
+            </select>
+        </div>
+        
+        <button onclick="configurarDestino()" class="boton-verde" style="margin-top:15px;">
+            Configurar Destino
+        </button>
+        <span id="destino-estado" class="estado"></span>
+    </div>
+</div>
+
+<div class="acciones">
+    <button onclick="crearEstructura()" class="boton-naranja">Crear Tablas</button>
+    <a href="/migracion" class="boton-azul">Ir a Migracion</a>
+</div>
+
+<div id="esquema-detalle" style="display:none; background:white; padding:15px; border-radius:8px; margin-top:20px;"></div>
+
+<style>
+.panel-conexiones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+.conexion-panel {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.zona-subida {
+    border: 2px dashed #1a73e8;
+    padding: 40px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #f8f9fa;
+}
+.zona-subida:hover {
+    background: #e3f2fd;
+}
+.campo {
+    margin-bottom: 15px;
+}
+.campo label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.campo select, .campo input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+.estado {
+    display: inline-block;
+    margin-left: 10px;
+    font-weight: bold;
+}
+.boton-verde {
+    padding: 10px 20px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.boton-naranja {
+    padding: 10px 20px;
+    background: #FF9800;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.boton-azul {
+    padding: 10px 20px;
+    background: #2196F3;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    display: inline-block;
+}
+.acciones {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+</style>
+
+<script>
+// Recuperar estado al cargar la pagina
+window.onload = async function() {
+    try {
+        const resp = await fetch('/api/estado');
+        const datos = await resp.json();
+        
+        if (datos.estado === 'exito' && datos.tablas) {
+            document.getElementById('info-origen').style.display = 'block';
+            document.getElementById('info-origen').innerHTML = `
+                <p><strong>Tipo:</strong> ${datos.tipo_detectado}</p>
+                <p><strong>Tablas:</strong> ${datos.total_tablas}</p>
+                <p style="color:#4CAF50;">Archivo cargado: Click para cambiar</p>
+            `;
+            
+            if (datos.motor_destino) {
+                document.getElementById('motor-destino').value = datos.motor_destino;
+                document.getElementById('destino-estado').textContent = 'Configurado: ' + datos.motor_destino;
+                document.getElementById('destino-estado').style.color = 'green';
+            }
+            
+            // Mostrar esquema
+            let html = '<h3>Tablas detectadas:</h3>';
+            for (const [tabla, cols] of Object.entries(datos.esquema || {})) {
+                html += `<p><strong>${tabla}</strong>: ${cols.map(c => c.nombre).join(', ')}</p>`;
+            }
+            document.getElementById('esquema-detalle').style.display = 'block';
+            document.getElementById('esquema-detalle').innerHTML = html;
+        }
+    } catch(e) {}
+};
+
+async function subirArchivo() {
+    const archivo = document.getElementById('archivo-input').files[0];
+    if (!archivo) return;
+    
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    
+    document.getElementById('zona-subida').innerHTML = '<p style="padding:40px;">Analizando...</p>';
+    
+    try {
+        const resp = await fetch('/api/subir-archivo', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const datos = await resp.json();
+        
+        if (datos.estado === 'exito') {
+            document.getElementById('info-origen').style.display = 'block';
+            document.getElementById('info-origen').innerHTML = `
+                <p><strong>Archivo:</strong> ${datos.nombre_archivo}</p>
+                <p><strong>Tipo detectado:</strong> ${datos.tipo_detectado}</p>
+                <p><strong>Tablas:</strong> ${datos.total_tablas}</p>
+            `;
+            
+            document.getElementById('zona-subida').innerHTML = `
+                <div style="padding:40px;">
+                    <p style="color:#4CAF50; font-size:18px;">Archivo listo</p>
+                    <p>${datos.nombre_archivo}</p>
+                    <p style="font-size:11px; color:#999;">Click para cambiar</p>
+                </div>`;
+            
+            // Mostrar esquema
+            let html = '<h3>Estructura detectada:</h3>';
+            for (const [tabla, cols] of Object.entries(datos.esquema || {})) {
+                html += `<p><strong>${tabla}</strong>: ${cols.map(c => c.nombre).join(', ')}</p>`;
+            }
+            document.getElementById('esquema-detalle').style.display = 'block';
+            document.getElementById('esquema-detalle').innerHTML = html;
+        } else {
+            alert(datos.mensaje);
+            document.getElementById('zona-subida').innerHTML = `
+                <div style="padding:40px;">
+                    <p>Error: ${datos.mensaje}</p>
+                    <p style="font-size:11px;">Click para intentar de nuevo</p>
+                </div>`;
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function configurarDestino() {
+    const motor = document.getElementById('motor-destino').value;
+    const estado = document.getElementById('destino-estado');
+    
+    if (!motor) {
+        alert('Seleccione un motor de destino');
+        return;
+    }
+    
+    estado.textContent = 'Configurando...';
+    estado.style.color = 'orange';
+    
+    try {
+        const resp = await fetch('/api/configurar-destino', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({motor_destino: motor})
+        });
+        
+        const datos = await resp.json();
+        
+        if (datos.estado === 'exito') {
+            estado.textContent = 'Listo: ' + motor;
+            estado.style.color = 'green';
+        } else {
+            estado.textContent = datos.mensaje;
+            estado.style.color = 'red';
+        }
+    } catch (e) {
+        estado.textContent = 'Error';
+        estado.style.color = 'red';
+    }
+}
+
+async function crearEstructura() {
+    try {
+        const resp = await fetch('/api/crear-estructura', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const datos = await resp.json();
+        alert(datos.mensaje);
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+}
+</script>
+{% endblock %}
