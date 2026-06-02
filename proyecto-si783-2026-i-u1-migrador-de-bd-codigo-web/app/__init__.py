@@ -15,7 +15,9 @@ def crear_app():
     from config import Config
     app.config.from_object(Config)
 
-    async_mode = 'threading' if os.name == 'nt' else None
+    async_mode = os.environ.get('SOCKETIO_ASYNC_MODE')
+    if async_mode is None and os.name == 'nt':
+        async_mode = 'threading'
     socketio.init_app(app, cors_allowed_origins="*", async_mode=async_mode)
     mail.init_app(app)
 

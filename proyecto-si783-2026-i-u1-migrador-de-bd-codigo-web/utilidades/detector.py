@@ -3,7 +3,7 @@ import json
 import sqlite3
 import re
 import pandas as pd
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 
 
 def _extraer_texto_imprimible(datos: bytes, minimo: int = 6) -> str:
@@ -18,14 +18,17 @@ def _detectar_sql_desde_texto(texto: str) -> Tuple[str, str]:
     """Devuelve un tipo SQL estimado a partir de fragmentos de texto."""
     mayus = texto.upper()
 
+    def _tiene_alguno(fragmentos):
+        return any(fragmento in mayus for fragmento in fragmentos)
+
     # Detectar tipos SQL específicos por palabras clave características
     if 'CREATE TABLE' in mayus:
-        if 'POSTGRES' in mayus or 'PG_' in mayus or 'SERIAL' in mayus or 'CONSTRAINT' in mayus:
-            return 'PostgreSQL', 'Dump PostgreSQL detectado'
-        if 'AUTO_INCREMENT' in mayus or 'ENGINE=INNODB' in mayus or 'ENGINE=MYISAM' in mayus or 'CHARACTER SET' in mayus:
-            return 'MySQL', 'Dump MySQL detectado'
-        if 'NVARCHAR' in mayus or 'IDENTITY(' in mayus or 'GO\n' in mayus or '\nGO\n' in mayus or '[' in texto:
+        if _tiene_alguno(['NVARCHAR', 'IDENTITY(']) or re.search(r'(^|\n)GO(\r?\n|$)', mayus) or '[' in texto:
             return 'Microsoft SQL Server', 'Dump SQL Server detectado'
+        if _tiene_alguno(['POSTGRES', 'PG_', 'SERIAL', 'BIGSERIAL', 'SMALLSERIAL', 'NEXTVAL(', 'RETURNING', 'CREATE EXTENSION', 'SET SEARCH_PATH', 'ALTER TABLE ONLY', 'PG_CATALOG', 'OWNER TO']):
+            return 'PostgreSQL', 'Dump PostgreSQL detectado'
+        if _tiene_alguno(['AUTO_INCREMENT', 'ENGINE=INNODB', 'ENGINE=MYISAM', 'CHARACTER SET', 'COLLATE ']):
+            return 'MySQL', 'Dump MySQL detectado'
         if 'VARCHAR2' in mayus or 'NUMBER(' in mayus or 'TABLESPACE' in mayus:
             return 'Oracle', 'Dump Oracle detectado'
         if 'INT64' in mayus or 'FLOAT64' in mayus or 'STRUCT<' in mayus:

@@ -106,6 +106,15 @@ def _registrar_actividad_ip(actividad_desc: str):
     usuario = session.get('usuario', 'anónimo')
     _registrar_ip(ip, actividad_desc, usuario)
 
+
+def _resumen_origen_detectado(tipo: str, mensaje: str = '') -> dict:
+    """Normaliza la salida de detección para mostrar el motor de origen sin ambigüedad."""
+    return {
+        'tipo_detectado': tipo,
+        'motor_origen': tipo,
+        'mensaje_deteccion': mensaje or '',
+    }
+
 # ==================== RUTAS DE AUTENTICACIÓN ====================
 
 @principal.route('/login', methods=['GET', 'POST'])
@@ -671,10 +680,12 @@ def api_subir_archivo():
 
     if tipo == 'SQL Server Backup':
         _registrar_log(f'Archivo "{nombre}" identificado como backup binario: {mensaje}', 'error', ip)
-        return jsonify({'estado': 'error', 'mensaje': mensaje, 'tipo_detectado': tipo})
+        resumen_origen = _resumen_origen_detectado(tipo, mensaje)
+        return jsonify({'estado': 'error', 'mensaje': mensaje, **resumen_origen})
 
     try:
         origen = ConectorOrigen(ruta, tipo)
+        origen.mensaje_deteccion = mensaje
         objetos_detectados = (
             len(getattr(origen, 'vistas', []))
             + len(getattr(origen, 'triggers', []))
@@ -693,13 +704,14 @@ def api_subir_archivo():
                 )
                 return jsonify({
                     'estado': 'exito',
-                    'tipo_detectado': tipo,
+                    **_resumen_origen_detectado(tipo, mensaje),
                     'nombre_archivo': nombre,
                     'tablas': [],
                     'total_tablas': 0,
                     'esquema': {},
                     'objetos_detectados': objetos_detectados,
-                    'mensaje': 'Se detectaron objetos SQL pero no tablas en el archivo.'
+                    'mensaje': 'Se detectaron objetos SQL pero no tablas en el archivo.',
+                    'puede_validar_tipo': True
                 })
 
             _registrar_log(f'Archivo "{nombre}" sin tablas detectadas', 'error', ip)
@@ -712,16 +724,107 @@ def api_subir_archivo():
 
         return jsonify({
             'estado': 'exito',
-            'tipo_detectado': tipo,
+            **_resumen_origen_detectado(tipo, mensaje),
             'nombre_archivo': nombre,
             'tablas': origen.tablas,
             'total_tablas': len(origen.tablas),
-            'esquema': _esquema_serializable(origen.esquema)
+            'esquema': _esquema_serializable(origen.esquema),
+            'puede_validar_tipo': True
         })
     except Exception as e:
         # Registrar y devolver siempre JSON (evitar páginas HTML o trazas)
         _registrar_log(f'Error al cargar "{nombre}": {str(e)}', 'error', ip)
         return jsonify({'estado': 'error', 'mensaje': f'Error procesando archivo: {str(e)}'})
+
+
+@principal.route('/api/validar-tipo-bd', methods=['POST'])
+@requerir_login
+def api_validar_tipo_bd():
+    """Permite al usuario validar o corregir el tipo de BD detectado."""
+    _registrar_actividad_ip('Validar tipo BD')
+    
+    datos = request.json or {}
+    tipo_sugerido = (datos.get('tipo_bd') or '').strip()
+    
+    if not tipo_sugerido:
+        return jsonify({'estado': 'error', 'mensaje': 'Debe indicar un tipo de base de datos'})
+    
+    # Lista de tipos válidos permitidos
+    tipos_validos = [
+        'SQLite', 'PostgreSQL', 'MySQL', 'MariaDB', 'Microsoft SQL Server', 'Oracle',
+        'Snowflake', 'Amazon Redshift', 'Azure SQL Database', 'IBM Db2', 'Google BigQuery',
+        'MongoDB', 'Elasticsearch', 'Redis', 'Apache Cassandra', 'MongoDB Atlas',
+        'CSV', 'Excel', 'SQL Generico'
+    ]
+    
+    if tipo_sugerido not in tipos_validos:
+        return jsonify({
+            'estado': 'error',
+            'mensaje': f'Tipo "{tipo_sugerido}" no válido. Tipos permitidos: {", ".join(tipos_validos)}'
+        })
+    
+    if not estado_app['origen']:
+        return jsonify({'estado': 'error', 'mensaje': 'No hay archivo cargado'})
+    
+    # Cambiar el tipo de BD en el origen
+    tipo_anterior = estado_app['origen'].tipo
+    estado_app['origen'].tipo = tipo_sugerido
+    
+    ip = request.remote_addr or 'desconocida'
+    _registrar_log(
+        f'Tipo de BD corregido: {tipo_anterior} → {tipo_sugerido}',
+        'info', ip
+    )
+    
+    return jsonify({
+        'estado': 'exito',
+        'mensaje': f'Tipo de BD actualizado: {tipo_anterior} → {tipo_sugerido}',
+        'tipo_anterior': tipo_anterior,
+        'tipo_nuevo': tipo_sugerido,
+        'tipo_detectado': tipo_sugerido,
+        'motor_origen': tipo_sugerido
+    })
+
+
+@principal.route('/api/sugerir-tipos-bd', methods=['GET'])
+def api_sugerir_tipos_bd():
+    """Devuelve los tipos de BD disponibles para validación manual."""
+    tipos_relacionales = [
+        {'id': 'SQLite', 'nombre': 'SQLite', 'grupo': 'Relacional'},
+        {'id': 'PostgreSQL', 'nombre': 'PostgreSQL', 'grupo': 'Relacional'},
+        {'id': 'MySQL', 'nombre': 'MySQL', 'grupo': 'Relacional'},
+        {'id': 'MariaDB', 'nombre': 'MariaDB', 'grupo': 'Relacional'},
+        {'id': 'Microsoft SQL Server', 'nombre': 'Microsoft SQL Server', 'grupo': 'Relacional'},
+        {'id': 'Oracle', 'nombre': 'Oracle', 'grupo': 'Relacional'},
+        {'id': 'Snowflake', 'nombre': 'Snowflake', 'grupo': 'Relacional'},
+        {'id': 'Amazon Redshift', 'nombre': 'Amazon Redshift', 'grupo': 'Relacional'},
+        {'id': 'Azure SQL Database', 'nombre': 'Azure SQL Database', 'grupo': 'Relacional'},
+        {'id': 'IBM Db2', 'nombre': 'IBM Db2', 'grupo': 'Relacional'},
+        {'id': 'Google BigQuery', 'nombre': 'Google BigQuery', 'grupo': 'Relacional'},
+    ]
+    
+    tipos_no_relacionales = [
+        {'id': 'MongoDB', 'nombre': 'MongoDB', 'grupo': 'No Relacional'},
+        {'id': 'MongoDB Atlas', 'nombre': 'MongoDB Atlas', 'grupo': 'No Relacional'},
+        {'id': 'Elasticsearch', 'nombre': 'Elasticsearch', 'grupo': 'No Relacional'},
+        {'id': 'Redis', 'nombre': 'Redis', 'grupo': 'No Relacional'},
+        {'id': 'Apache Cassandra', 'nombre': 'Apache Cassandra', 'grupo': 'No Relacional'},
+    ]
+    
+    tipos_otros = [
+        {'id': 'CSV', 'nombre': 'CSV', 'grupo': 'Otros'},
+        {'id': 'Excel', 'nombre': 'Excel', 'grupo': 'Otros'},
+        {'id': 'SQL Generico', 'nombre': 'SQL Genérico', 'grupo': 'Otros'},
+    ]
+    
+    return jsonify({
+        'tipos': tipos_relacionales + tipos_no_relacionales + tipos_otros,
+        'grupos': {
+            'Relacional': tipos_relacionales,
+            'No Relacional': tipos_no_relacionales,
+            'Otros': tipos_otros
+        }
+    })
 
 
 @principal.route('/api/subir-a-github', methods=['POST'])
@@ -1124,12 +1227,15 @@ def api_crear_estructura():
 @principal.route('/api/estado')
 def api_estado():
     if estado_app['origen']:
+        origen = estado_app['origen']
         return jsonify({
             'estado': 'exito',
-            'tipo_detectado': estado_app['origen'].tipo,
-            'tablas': estado_app['origen'].tablas,
-            'total_tablas': len(estado_app['origen'].tablas),
-            'esquema': _esquema_serializable(estado_app['origen'].esquema),
+            'tipo_detectado': origen.tipo,
+            'motor_origen': origen.tipo,
+            'mensaje_deteccion': getattr(origen, 'mensaje_deteccion', ''),
+            'tablas': origen.tablas,
+            'total_tablas': len(origen.tablas),
+            'esquema': _esquema_serializable(origen.esquema),
             'motor_destino': estado_app['destino'].motor if estado_app['destino'] else None,
             'metricas': estado_app['metricas'],
             'proceso_activo': estado_app['proceso_activo']

@@ -65,6 +65,11 @@
                     <button type="button" class="motor-opcion" data-motor="MongoDB Atlas">MongoDB Atlas</button>
                 </div>
             </div>
+            
+            <div style="padding:15px; background:#f0f6ff; border:1px solid #d8e3f0; border-radius:8px;">
+                <p style="margin:0; color:#244a7c; font-size:13px; font-weight:bold;">💡 Ayuda:</p>
+                <p style="margin:5px 0 0 0; color:#5f6c7b; font-size:12px;">Si el tipo de origen detectado no es correcto, después de subir el archivo podrás validarlo o cambiarlo manualmente.</p>
+            </div>
         </div>
         
         <button onclick="configurarDestino()" style="margin-top:15px; padding:10px 20px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; width:100%;">
@@ -312,6 +317,106 @@
     color: #244a7c;
     box-shadow: 0 0 0 2px rgba(36, 74, 124, 0.12) inset;
 }
+.origen-resumen {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border: 1px solid #d8e3f0;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #f7fbff, #ffffff);
+}
+.origen-resumen .etiqueta {
+    display: inline-block;
+    margin-bottom: 8px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #244a7c;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+}
+.origen-resumen .motor {
+    margin: 0;
+    color: #1f2937;
+    font-size: 18px;
+    font-weight: 700;
+}
+.origen-resumen .detalle {
+    margin: 6px 0 0 0;
+    color: #5f6c7b;
+    font-size: 13px;
+}
+.origen-resumen .meta {
+    margin: 10px 0 0 0;
+    color: #244a7c;
+    font-size: 13px;
+    font-weight: 600;
+}
+</style>
+
+<!-- Modal para validar/cambiar tipo de BD -->
+<div id="modal-validar-tipo" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; padding:30px; max-width:500px; width:90%; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+        <h3 style="margin-top:0; color:#244a7c;">Validar o cambiar tipo de BD</h3>
+        
+        <p style="color:#666; margin-bottom:20px;">
+            Si el tipo detectado no es correcto, selecciona el motor correcto de la lista.
+        </p>
+        
+        <div style="margin-bottom:20px;">
+            <label style="display:block; margin-bottom:10px; color:#244a7c; font-weight:bold;">
+                Motor detectado:
+            </label>
+            <p id="modal-tipo-actual" style="margin:0; padding:10px; background:#f0f0f0; border-radius:6px; color:#244a7c; font-weight:bold;"></p>
+        </div>
+        
+        <div style="margin-bottom:20px;">
+            <label style="display:block; margin-bottom:10px; color:#244a7c; font-weight:bold;">
+                Selecciona el tipo correcto:
+            </label>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:300px; overflow-y:auto; padding:10px; background:#f9f9f9; border-radius:6px; border:1px solid #e0e0e0;">
+                <div id="modal-tipos-relacionales"></div>
+                <div id="modal-tipos-no-relacionales"></div>
+            </div>
+        </div>
+        
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <button onclick="cerrarModalValidarTipo()" style="padding:10px 20px; background:#999; color:white; border:none; border-radius:4px; cursor:pointer;">
+                Cancelar
+            </button>
+            <button onclick="guardarTipoBD()" style="padding:10px 20px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">
+                Confirmar cambio
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+#modal-validar-tipo {
+    display: none !important;
+}
+#modal-validar-tipo[data-open="true"] {
+    display: flex !important;
+}
+.tipo-opcion {
+    padding: 10px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.tipo-opcion:hover {
+    border-color: #244a7c;
+    background: #f0f6ff;
+}
+.tipo-opcion.activo {
+    border-color: #244a7c;
+    background: #244a7c;
+    color: white;
+}
 </style>
 
 <script>
@@ -320,6 +425,28 @@ let migracionActiva = false;
 let intervaloEstado = null;
 let motorDestinoSeleccionado = '';
 socket.on('connect', () => socket.emit('conectar'));
+
+function _renderizarOrigen(datos) {
+    const tipo = datos && datos.tipo_detectado ? datos.tipo_detectado : 'Desconocido';
+    const mensaje = datos && datos.mensaje_deteccion ? datos.mensaje_deteccion : '';
+    const tablas = datos && typeof datos.total_tablas !== 'undefined' ? datos.total_tablas : 0;
+
+    const detalleMotor = mensaje || (tipo === 'SQL Generico'
+        ? 'Detectado como script SQL genérico. Si sabes que proviene de un motor concreto, revisa el archivo para afinar la detección.'
+        : 'Tipo detectado a partir del contenido del archivo.');
+
+    return `
+        <div class="origen-resumen">
+            <div class="etiqueta">Motor de origen detectado</div>
+            <p class="motor">${tipo}</p>
+            <p class="detalle">${detalleMotor}</p>
+            <p class="meta">Tablas detectadas: ${tablas}</p>
+            <button onclick="abrirModalValidarTipo('${tipo}')" style="margin-top:10px; padding:8px 12px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px;">
+                ✓ Validar o cambiar tipo
+            </button>
+        </div>
+    `;
+}
 
 function marcarMotorSeleccionado(motor) {
     const inputMotor = document.getElementById('motor-destino');
@@ -348,16 +475,15 @@ document.addEventListener('click', (event) => {
 
 // Recuperar estado al cargar
 window.onload = async function() {
+    cargarTiposBD();  // Precargar tipos disponibles
+    
     try {
         const resp = await fetch('/api/estado');
         const datos = await resp.json();
         
         if (datos.estado === 'exito') {
             document.getElementById('info-origen').style.display = 'block';
-            document.getElementById('info-origen').innerHTML = `
-                <p style="color:#244a7c;">Archivo cargado: ${datos.tipo_detectado}</p>
-                <p>${datos.total_tablas} tablas detectadas</p>
-            `;
+            document.getElementById('info-origen').innerHTML = _renderizarOrigen(datos);
             document.getElementById('zona-subida').innerHTML = `
                 <div style="padding:40px; color:#244a7c;">
                     <div style="font-size:40px;">[ Listo ]</div>
@@ -483,14 +609,13 @@ async function subirArchivo() {
         if (datos && datos.estado === 'exito') {
             document.getElementById('info-origen').style.display = 'block';
             document.getElementById('info-origen').innerHTML = `
-                <p style="color:#244a7c;">Archivo: ${datos.nombre_archivo}</p>
-                <p>Tipo: ${datos.tipo_detectado}</p>
-                <p>Tablas: ${datos.total_tablas}</p>
+                <p style="color:#244a7c; margin:0 0 10px 0; font-weight:bold;">Archivo: ${datos.nombre_archivo}</p>
+                ${_renderizarOrigen(datos)}
             `;
             document.getElementById('zona-subida').innerHTML = `
                 <div style="padding:40px; color:#244a7c;">
                     <div style="font-size:40px;">[ OK ]</div>
-                    <p>${datos.tipo_detectado}</p>
+                    <p>Motor: ${datos.tipo_detectado}</p>
                 </div>`;
         } else if (datos) {
             alert(datos.mensaje || 'Error desconocido');
@@ -726,8 +851,117 @@ function cambiarTab(tab) {
     }
 }
 
-let githubReposCache = [];
-let githubArchivosCache = [];
+let tiposBDDisponibles = [];
+let tipoSeleccionadoValidar = '';
+
+async function cargarTiposBD() {
+    try {
+        const resp = await fetch('/api/sugerir-tipos-bd');
+        const datos = await resp.json();
+        tiposBDDisponibles = datos.tipos || [];
+    } catch(e) {
+        console.error('Error cargando tipos BD:', e);
+    }
+}
+
+async function abrirModalValidarTipo(tipoActual) {
+    tipoSeleccionadoValidar = tipoActual;
+    document.getElementById('modal-tipo-actual').textContent = tipoActual;
+    
+    // Cargar y mostrar opciones de tipos
+    if (tiposBDDisponibles.length === 0) {
+        await cargarTiposBD();
+    }
+    
+    const relacionales = tiposBDDisponibles.filter(t => t.grupo === 'Relacional').slice(0, 8);
+    const noRelacionles = tiposBDDisponibles.filter(t => t.grupo === 'No Relacional').slice(0, 8);
+    
+    const htmlRelacionales = relacionales.map(tipo => `
+        <button type="button" class="tipo-opcion ${tipo.id === tipoActual ? 'activo' : ''}" 
+            onclick="seleccionarTipoBD('${tipo.id}')" data-tipo="${tipo.id}">
+            ${tipo.nombre}
+        </button>
+    `).join('');
+    
+    const htmlNoRelacionles = noRelacionles.map(tipo => `
+        <button type="button" class="tipo-opcion ${tipo.id === tipoActual ? 'activo' : ''}" 
+            onclick="seleccionarTipoBD('${tipo.id}')" data-tipo="${tipo.id}">
+            ${tipo.nombre}
+        </button>
+    `).join('');
+    
+    document.getElementById('modal-tipos-relacionales').innerHTML = `
+        <div style="grid-column:1/-1; font-weight:bold; color:#244a7c; padding:8px 0; border-bottom:1px solid #ddd;">
+            Relacionales
+        </div>
+        ${htmlRelacionales}
+    `;
+    document.getElementById('modal-tipos-no-relacionales').innerHTML = `
+        <div style="grid-column:1/-1; font-weight:bold; color:#244a7c; padding:8px 0; border-bottom:1px solid #ddd;">
+            No relacionales
+        </div>
+        ${htmlNoRelacionles}
+    `;
+    
+    document.getElementById('modal-validar-tipo').setAttribute('data-open', 'true');
+}
+
+function seleccionarTipoBD(tipo) {
+    tipoSeleccionadoValidar = tipo;
+    document.querySelectorAll('.tipo-opcion').forEach(btn => {
+        btn.classList.toggle('activo', btn.getAttribute('data-tipo') === tipo);
+    });
+}
+
+function cerrarModalValidarTipo() {
+    document.getElementById('modal-validar-tipo').setAttribute('data-open', 'false');
+}
+
+async function guardarTipoBD() {
+    if (!tipoSeleccionadoValidar) {
+        alert('Selecciona un tipo de base de datos');
+        return;
+    }
+    
+    try {
+        const resp = await fetch('/api/validar-tipo-bd', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({tipo_bd: tipoSeleccionadoValidar})
+        });
+        const datos = await resp.json();
+        
+        if (datos.estado === 'exito') {
+            alert('Tipo de BD actualizado: ' + datos.tipo_nuevo);
+            
+            // Actualizar la interfaz
+            if (estado_app && estado_app.origen) {
+                estado_app.origen.tipo = tipoSeleccionadoValidar;
+            }
+            
+            // Recargar el resumen de origen
+            const infoOrigen = document.getElementById('info-origen');
+            if (infoOrigen && infoOrigen.innerHTML) {
+                // Actualizar solo el tipo mostrado
+                infoOrigen.innerHTML = infoOrigen.innerHTML.replace(
+                    /Motor de origen detectado<\/div>\s*<p class="motor">[^<]+<\/p>/,
+                    `Motor de origen detectado</div>
+                    <p class="motor">${tipoSeleccionadoValidar}</p>`
+                );
+            }
+            
+            cerrarModalValidarTipo();
+        } else {
+            alert('Error: ' + (datos.mensaje || 'No se pudo cambiar el tipo'));
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+// Variable global para pasar datos del estado
+let estado_app = {};
+
 
 function autocompletarPathGithub() {
     const archivo = document.getElementById('github-archivo').value;
