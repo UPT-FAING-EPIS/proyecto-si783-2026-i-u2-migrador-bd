@@ -18,7 +18,57 @@
         
         <div class="zona-subida" id="zona-subida" onclick="document.getElementById('archivo-input').click()">
             <div style="font-size:40px;">[ Subir Archivo ]</div>
-            <p>Click para seleccionar</p>
+            <p>Click para seleccionar o arrastra un archivo aquí</p>
+        </div>
+
+        <!-- DETECTOR VISUAL EN TIEMPO REAL -->
+        <div class="detector-container">
+            <div class="detector-titulo">
+                <span>🔍 Detector de Base de Datos</span>
+                <span id="detector-estado-texto" style="font-size:11px; font-weight:normal; color:#718096;">Esperando archivo...</span>
+            </div>
+            <div class="detector-grid">
+                <div class="detector-badge" id="badge-mysql">
+                    <span class="icon">🐬</span>
+                    <span>MySQL / Heidi</span>
+                    <span class="badge-check">✓</span>
+                </div>
+                <div class="detector-badge" id="badge-sqlite">
+                    <span class="icon">📁</span>
+                    <span>SQLite</span>
+                    <span class="badge-check">✓</span>
+                </div>
+                <div class="detector-badge" id="badge-postgresql">
+                    <span class="icon">🐘</span>
+                    <span>PostgreSQL</span>
+                    <span class="badge-check">✓</span>
+                </div>
+                <div class="detector-badge" id="badge-sqlserver">
+                    <span class="icon">🗄️</span>
+                    <span>SQL Server</span>
+                    <span class="badge-check">✓</span>
+                </div>
+                <div class="detector-badge" id="badge-mongodb">
+                    <span class="icon">🍃</span>
+                    <span>MongoDB</span>
+                    <span class="badge-check">✓</span>
+                </div>
+                <div class="detector-badge" id="badge-cassandra">
+                    <span class="icon">👁️</span>
+                    <span>Cassandra</span>
+                    <span class="badge-check">✓</span>
+                </div>
+                <div class="detector-badge" id="badge-excelcsv">
+                    <span class="icon">📊</span>
+                    <span>Excel / CSV</span>
+                    <span class="badge-check">✓</span>
+                </div>
+                <div class="detector-badge" id="badge-otros">
+                    <span class="icon">⚙️</span>
+                    <span>Otros / SQL</span>
+                    <span class="badge-check">✓</span>
+                </div>
+            </div>
         </div>
         
         <div id="info-origen" style="display:none; margin-top:15px;"></div>
@@ -262,9 +312,98 @@
     border-radius: 8px;
     cursor: pointer;
     background: #f8f9fa;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .zona-subida:hover {
     background: #edf2f7;
+    border-color: #244a7c;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.1);
+}
+.zona-subida.dragover {
+    background: #e2e8f0;
+    border-color: #244a7c;
+    border-style: solid;
+    transform: scale(1.02);
+    box-shadow: 0 8px 24px rgba(36, 74, 124, 0.15);
+}
+
+/* Detector Inteligente Visual */
+.detector-container {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+.detector-titulo {
+    font-size: 13px;
+    font-weight: 700;
+    color: #4a5568;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.detector-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+.detector-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #a0aec0;
+    transition: all 0.25s ease;
+    user-select: none;
+    position: relative;
+    text-align: center;
+}
+.detector-badge .icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+    filter: grayscale(100%);
+    opacity: 0.6;
+    transition: all 0.25s ease;
+}
+.detector-badge .badge-check {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 8px;
+    background: #244a7c;
+    color: white;
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    display: none;
+    text-align: center;
+    line-height: 12px;
+}
+.detector-badge.activo {
+    border-color: #244a7c;
+    background: #edf5ff;
+    color: #244a7c;
+    box-shadow: 0 4px 12px rgba(36, 74, 124, 0.12);
+    font-weight: 700;
+}
+.detector-badge.activo .icon {
+    filter: grayscale(0%);
+    opacity: 1;
+    transform: scale(1.1);
+}
+@media (max-width: 480px) {
+    .detector-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 .metricas {
     display: grid;
@@ -497,9 +636,86 @@ document.addEventListener('click', (event) => {
     marcarMotorSeleccionado(boton.dataset.motor || '');
 });
 
+function actualizarDetectorVisual(tipoDetectado) {
+    // Quitar la clase "activo" de todos los badges y ocultar checks
+    document.querySelectorAll('.detector-badge').forEach(badge => {
+        badge.classList.remove('activo');
+        const check = badge.querySelector('.badge-check');
+        if (check) check.style.display = 'none';
+    });
+
+    const estadoTexto = document.getElementById('detector-estado-texto');
+
+    if (!tipoDetectado) {
+        if (estadoTexto) estadoTexto.textContent = 'Esperando archivo...';
+        return;
+    }
+
+    if (estadoTexto) estadoTexto.textContent = 'Tipo detectado: ' + tipoDetectado;
+
+    let idBadge = '';
+    const t = tipoDetectado.toLowerCase();
+    if (t.includes('mysql') || t.includes('mariadb')) {
+        idBadge = 'badge-mysql';
+    } else if (t.includes('sqlite')) {
+        idBadge = 'badge-sqlite';
+    } else if (t.includes('postgres')) {
+        idBadge = 'badge-postgresql';
+    } else if (t.includes('sql server') || t.includes('azure sql')) {
+        idBadge = 'badge-sqlserver';
+    } else if (t.includes('mongo')) {
+        idBadge = 'badge-mongodb';
+    } else if (t.includes('cassandra')) {
+        idBadge = 'badge-cassandra';
+    } else if (t.includes('excel') || t.includes('csv')) {
+        idBadge = 'badge-excelcsv';
+    } else {
+        idBadge = 'badge-otros';
+    }
+
+    if (idBadge) {
+        const badge = document.getElementById(idBadge);
+        if (badge) {
+            badge.classList.add('activo');
+            const check = badge.querySelector('.badge-check');
+            if (check) check.style.display = 'inline-block';
+        }
+    }
+}
+
 // Recuperar estado al cargar
 window.onload = async function() {
     cargarTiposBD();  // Precargar tipos disponibles
+
+    // Configurar Arrastrar y Soltar (Drag & Drop)
+    const dropZone = document.getElementById('zona-subida');
+    if (dropZone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('dragover');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                const input = document.getElementById('archivo-input');
+                input.files = files;
+                subirArchivo();
+            }
+        }, false);
+    }
     
     try {
         const resp = await fetch('/api/estado');
@@ -513,6 +729,8 @@ window.onload = async function() {
                     <div style="font-size:40px;">[ Listo ]</div>
                     <p>${datos.tipo_detectado} - ${datos.total_tablas} tablas</p>
                 </div>`;
+            
+            actualizarDetectorVisual(datos.tipo_detectado);
             
             if (datos.motor_destino) {
                 marcarMotorSeleccionado(datos.motor_destino);
@@ -577,7 +795,7 @@ socket.on('limpiar_interfaz', () => {
     document.getElementById('stat-errores').textContent = '0';
     document.getElementById('info-origen').style.display = 'none';
     document.getElementById('info-origen').innerHTML = '';
-    document.getElementById('zona-subida').innerHTML = '<div style="font-size:40px;">[ Subir Archivo ]</div><p>Click para seleccionar</p>';
+    document.getElementById('zona-subida').innerHTML = '<div style="font-size:40px;">[ Subir Archivo ]</div><p>Click para seleccionar o arrastra un archivo aquí</p>';
     document.getElementById('archivo-input').value = '';
     document.getElementById('motor-destino').value = '';
     document.getElementById('destino-estado').textContent = 'Listo para una nueva migración';
@@ -585,6 +803,7 @@ socket.on('limpiar_interfaz', () => {
     document.getElementById('btn-pausar').disabled = true;
     document.getElementById('btn-crear').disabled = true;
     document.getElementById('btn-descargar').disabled = !motorDestinoSeleccionado;
+    actualizarDetectorVisual(null);
 });
 
 socket.on('disconnect', () => {
@@ -641,11 +860,14 @@ async function subirArchivo() {
                     <div style="font-size:40px;">[ OK ]</div>
                     <p>Motor: ${datos.tipo_detectado}</p>
                 </div>`;
+            actualizarDetectorVisual(datos.tipo_detectado);
         } else if (datos) {
             alert(datos.mensaje || 'Error desconocido');
+            actualizarDetectorVisual(null);
         }
     } catch(e) {
         alert('Error: ' + e.message);
+        actualizarDetectorVisual(null);
     }
 }
 
@@ -974,6 +1196,7 @@ async function guardarTipoBD() {
                 );
             }
             
+            actualizarDetectorVisual(tipoSeleccionadoValidar);
             cerrarModalValidarTipo();
         } else {
             alert('Error: ' + (datos.mensaje || 'No se pudo cambiar el tipo'));

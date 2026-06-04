@@ -21,13 +21,22 @@ def _detectar_sql_desde_texto(texto: str) -> Tuple[str, str]:
     def _tiene_alguno(fragmentos):
         return any(fragmento in mayus for fragmento in fragmentos)
 
-    # Detectar tipos SQL específicos por palabras clave características
+    # 1. Detección rápida por comentarios de cabecera de herramientas populares
+    if 'HEIDISQL' in mayus:
+        return 'MySQL', 'Dump de MySQL exportado con HeidiSQL'
+    if 'MYSQL DUMP' in mayus or 'PG_DUMP' in mayus:
+        if 'MYSQL DUMP' in mayus:
+            return 'MySQL', 'Dump de MySQL oficial (mysqldump) detectado'
+        if 'PG_DUMP' in mayus:
+            return 'PostgreSQL', 'Dump de PostgreSQL (pg_dump) detectado'
+
+    # 2. Detección por sintaxis de creación de tablas
     if 'CREATE TABLE' in mayus:
-        if _tiene_alguno(['NVARCHAR', 'IDENTITY(']) or re.search(r'(^|\n)GO(\r?\n|$)', mayus) or '[' in texto:
+        if _tiene_alguno(['NVARCHAR', 'IDENTITY(', 'ON [PRIMARY]', '[DBO].']) or re.search(r'(^|\n)GO(\r?\n|$)', mayus) or '[' in texto:
             return 'Microsoft SQL Server', 'Dump SQL Server detectado'
         if _tiene_alguno(['POSTGRES', 'PG_', 'SERIAL', 'BIGSERIAL', 'SMALLSERIAL', 'NEXTVAL(', 'RETURNING', 'CREATE EXTENSION', 'SET SEARCH_PATH', 'ALTER TABLE ONLY', 'PG_CATALOG', 'OWNER TO']):
             return 'PostgreSQL', 'Dump PostgreSQL detectado'
-        if _tiene_alguno(['AUTO_INCREMENT', 'ENGINE=INNODB', 'ENGINE=MYISAM', 'CHARACTER SET', 'COLLATE ']):
+        if _tiene_alguno(['AUTO_INCREMENT', 'ENGINE=INNODB', 'ENGINE=MYISAM', 'CHARACTER SET', 'COLLATE ', '/*!40101 SET']):
             return 'MySQL', 'Dump MySQL detectado'
         if 'VARCHAR2' in mayus or 'NUMBER(' in mayus or 'TABLESPACE' in mayus:
             return 'Oracle', 'Dump Oracle detectado'
@@ -37,13 +46,20 @@ def _detectar_sql_desde_texto(texto: str) -> Tuple[str, str]:
             return 'Snowflake', 'Script Snowflake detectado'
         if 'DISTKEY' in mayus or 'SORTKEY' in mayus:
             return 'Amazon Redshift', 'Script Redshift detectado'
+        if 'CLUSTERING ORDER BY' in mayus or 'WITH REPLICATION =' in mayus:
+            return 'Apache Cassandra', 'Script Cassandra/CQL detectado'
         return 'SQL Generico', 'Script SQL detectado'
 
-    if any(clave in mayus for clave in ['CREATE VIEW', 'CREATE TRIGGER', 'CREATE PROCEDURE', 'CREATE PROC', 'CREATE FUNCTION', 'CREATE INDEX', 'INSERT INTO']):
+    # 3. Detección por sentencias DDL/DML sueltas o configuraciones
+    if _tiene_alguno(['CREATE VIEW', 'CREATE TRIGGER', 'CREATE PROCEDURE', 'CREATE PROC', 'CREATE FUNCTION', 'CREATE INDEX', 'INSERT INTO']):
+        if _tiene_alguno(['AUTO_INCREMENT', 'ENGINE=INNODB', '/*!40101 SET']):
+            return 'MySQL', 'Dump MySQL detectado'
+        if _tiene_alguno(['SERIAL', 'BIGSERIAL', 'SET SEARCH_PATH']):
+            return 'PostgreSQL', 'Dump PostgreSQL detectado'
         return 'SQL Generico', 'Script SQL detectado parcialmente'
     
-    # Detectar CQL (Cassandra)
-    if 'CREATE KEYSPACE' in mayus or 'CREATE TABLE' in mayus and 'CLUSTERING ORDER BY' in mayus:
+    # 4. Detectar CQL (Cassandra)
+    if 'CREATE KEYSPACE' in mayus or ('CREATE TABLE' in mayus and 'CLUSTERING ORDER BY' in mayus):
         return 'Apache Cassandra', 'Script Cassandra detectado'
 
     return '', ''
@@ -61,16 +77,22 @@ class DetectorBaseDatos:
         ext = os.path.splitext(nombre)[1].lower()
 
         # 1. Intentar SQLite (archivo binario): funciona con cualquier extension
+        conn = None
         try:
             conn = sqlite3.connect(ruta)
             cursor = conn.cursor()
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
             tablas = cursor.fetchall()
-            conn.close()
             if tablas:
                 return 'SQLite', f'SQLite: {len(tablas)} tablas', None
         except Exception:
             pass
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
         # 2. Intentar leer bytes y extraer texto imprimible para detectar scripts SQL (ANTES que JSON)
         try:
@@ -162,8 +184,8 @@ class DetectorBaseDatos:
 
         # 6. Intentar Excel
         try:
-            xls = pd.ExcelFile(ruta)
-            return 'Excel', f'Excel: {len(xls.sheet_names)} hojas', None
+            with pd.ExcelFile(ruta) as xls:
+                return 'Excel', f'Excel: {len(xls.sheet_names)} hojas', None
         except Exception:
             pass
 

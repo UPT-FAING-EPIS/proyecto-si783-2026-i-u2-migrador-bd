@@ -2,10 +2,18 @@
 """Test de detección de tipos de base de datos para todos los motores soportados."""
 
 import os
+import sys
 import tempfile
 import json
 from pathlib import Path
 from utilidades.detector import DetectorBaseDatos
+
+# Configurar encoding en la consola de Windows para evitar UnicodeEncodeError
+if sys.stdout.encoding.lower() != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 def test_deteccion(nombre_archivo, contenido, tipo_esperado):
     """Crea un archivo temporal y lo prueba con el detector."""
@@ -19,7 +27,10 @@ def test_deteccion(nombre_archivo, contenido, tipo_esperado):
         print(f"{estado} {nombre_archivo:40} Esperado: {tipo_esperado:25} Detectado: {tipo_detectado}")
         return tipo_esperado in tipo_detectado
     finally:
-        os.unlink(temp_path)
+        try:
+            os.unlink(temp_path)
+        except Exception as e:
+            print(f"Warning: No se pudo eliminar archivo temporal {temp_path}: {e}")
 
 print("=" * 110)
 print("PRUEBAS DE DETECCIÓN DE TIPO DE BASE DE DATOS")
@@ -27,6 +38,21 @@ print("=" * 110)
 
 # Pruebas para motores SQL relacionales
 tests = [
+    # HeidiSQL
+    ("heidisql_dump.sql", """
+    -- --------------------------------------------------------
+    -- Host:                         127.0.0.1
+    -- Versión del servidor:         10.4.24-MariaDB - mariadb.org binary distribution
+    -- SO del servidor:              Win64
+    -- HeidiSQL Versión:             11.3.0.6295
+    -- --------------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `users` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `name` varchar(50) DEFAULT NULL,
+        PRIMARY KEY (`id`)
+    );
+    """, "MySQL"),
+
     # PostgreSQL
     ("postgresql.sql", """
     CREATE TABLE IF NOT EXISTS users (
