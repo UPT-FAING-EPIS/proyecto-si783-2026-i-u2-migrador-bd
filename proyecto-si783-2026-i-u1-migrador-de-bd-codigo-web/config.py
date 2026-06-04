@@ -12,6 +12,10 @@ class Config:
     SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    
+    # URL Configuration para OAuth callbacks
+    SERVER_NAME = os.getenv('SERVER_NAME', None)  # Ej: '207.180.218.158' o 'midominio.com'
+    PREFERRED_URL_SCHEME = os.getenv('PREFERRED_URL_SCHEME', 'http')  # 'http' o 'https'
 
     # Carga de archivos
     MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500 MB
