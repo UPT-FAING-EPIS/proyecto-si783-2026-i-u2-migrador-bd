@@ -354,3 +354,140 @@ body {
     background: #edf2f7;
     font-weight: 600;
 }
+
+/* Hamburguesa */
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 8px;
+    align-items: center;
+    justify-content: center;
+}
+.menu-toggle svg {
+    display: block;
+}
+
+/* ==================== ESTILOS RESPONSIVOS PARA MÓVILES ==================== */
+
+@media (max-width: 992px) {
+    .contenido {
+        padding: 20px 15px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Navbar Responsivo */
+    .menu-toggle {
+        display: flex;
+    }
+    
+    .contenedor-nav {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        height: 60px;
+        position: relative;
+        padding: 0 10px;
+    }
+    
+    .enlaces-nav {
+        display: none; /* Oculto por defecto en móvil */
+        flex-direction: column;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        width: 100%;
+        background-color: #244a7c;
+        padding: 15px 20px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        gap: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .enlaces-nav.abierto {
+        display: flex; /* Se muestra al abrirse */
+    }
+    
+    .enlaces-nav a {
+        text-align: left;
+        margin-left: 0;
+        padding: 12px 16px;
+        width: 100%;
+        border-radius: 6px;
+        display: block;
+    }
+    
+    .enlaces-admin {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+        margin-left: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        padding-top: 15px;
+        gap: 15px;
+    }
+    
+    .usuario-info {
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+
+    /* Paneles de Configuración de Conexiones */
+    .panel-conexiones {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .acciones-config, .controles-migracion {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .acciones-config button, .acciones-config a,
+    .controles-migracion button, .controles-migracion a,
+    .boton-primario, .boton-secundario, .boton-exito, .boton-advertencia {
+        width: 100%;
+        text-align: center;
+    }
+
+    /* Estadísticas */
+    .estadisticas {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    
+    /* Contenedor de Tablas Adaptativo */
+    .tablas-descubiertas {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .tablas-descubiertas table {
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero h1 {
+        font-size: 28px;
+    }
+    
+    .descripcion {
+        font-size: 15px;
+        margin-bottom: 25px;
+    }
+
+    .estadisticas {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-valor {
+        font-size: 24px;
+    }
+}

@@ -26,7 +26,7 @@ pip install -r requirements_web.txt
 pip install gunicorn eventlet
 
 # Configurar Nginx
-sudo cp nginx_config /etc/nginx/sites-available/migradorbd
+sudo cp despliegue/nginx_config /etc/nginx/sites-available/migradorbd
 sudo ln -s /etc/nginx/sites-available/migradorbd /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx

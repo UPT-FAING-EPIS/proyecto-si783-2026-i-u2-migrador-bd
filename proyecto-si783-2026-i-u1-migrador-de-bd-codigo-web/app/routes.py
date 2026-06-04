@@ -137,7 +137,9 @@ def login():
             # Para mejor UX, podríamos buscar por email también
             return render_template('login.html', error='Usuario o contraseña incorrectos, o cuenta no verificada. Revisa tu email.')
 
-    return render_template('login.html')
+    error = request.args.get('error')
+    mensaje = request.args.get('mensaje')
+    return render_template('login.html', error=error, mensaje=mensaje)
 
 @principal.route('/registro', methods=['GET', 'POST'])
 def registro():
@@ -163,7 +165,8 @@ def registro():
         else:
             return render_template('registro.html', error=mensaje)
 
-    return render_template('registro.html')
+    error = request.args.get('error')
+    return render_template('registro.html', error=error)
 
 @principal.route('/verificar', methods=['GET', 'POST'])
 def verificar():
@@ -193,6 +196,9 @@ def logout():
 @principal.route('/auth/<proveedor>')
 def oauth_login(proveedor):
     """Inicia el flujo de login OAuth con Google o GitHub."""
+    action = request.args.get('action', 'login')
+    session['oauth_action'] = action
+    
     if proveedor.lower() == 'google':
         from app.oauth import oauth
         redirect_uri = url_for('principal.oauth_callback', proveedor='google', _external=True)
@@ -208,16 +214,28 @@ def oauth_callback(proveedor):
     """Callback de OAuth."""
     try:
         from app.oauth import oauth
+        action = session.pop('oauth_action', 'login')
 
         if proveedor.lower() == 'google':
             token = oauth.google.authorize_access_token()
             usuario_info = token.get('userinfo')
 
             if usuario_info:
+                sub = usuario_info.get('sub')
+                email = usuario_info.get('email')
+                
+                # Verificar si el usuario ya tiene cuenta registrada (por email o por OAuth previo)
+                from app.auth import run_query
+                oauth_existente = run_query('SELECT usuario_id FROM oauth_usuarios WHERE proveedor = ? AND proveedor_id = ?', ('google', sub), fetchone=True)
+                usuario_existente = run_query('SELECT id FROM usuarios WHERE email = ?', (email,), fetchone=True)
+                
+                if action == 'login' and not oauth_existente and not usuario_existente:
+                    return redirect(url_for('principal.login', error='No tienes una cuenta registrada. Regístrate primero con Google o GitHub.'))
+
                 usuario_data = registrar_usuario_oauth(
                     proveedor='google',
-                    proveedor_id=usuario_info.get('sub'),
-                    email=usuario_info.get('email'),
+                    proveedor_id=sub,
+                    email=email,
                     nombre=usuario_info.get('name'),
                     foto_url=usuario_info.get('picture')
                 )
@@ -254,9 +272,19 @@ def oauth_callback(proveedor):
                     email = emails[0].get('email')
 
             if email:
+                sub = str(usuario_info.get('id'))
+                
+                # Verificar si el usuario ya tiene cuenta registrada (por email o por OAuth previo)
+                from app.auth import run_query
+                oauth_existente = run_query('SELECT usuario_id FROM oauth_usuarios WHERE proveedor = ? AND proveedor_id = ?', ('github', sub), fetchone=True)
+                usuario_existente = run_query('SELECT id FROM usuarios WHERE email = ?', (email,), fetchone=True)
+                
+                if action == 'login' and not oauth_existente and not usuario_existente:
+                    return redirect(url_for('principal.login', error='No tienes una cuenta registrada. Regístrate primero con Google o GitHub.'))
+
                 usuario_data = registrar_usuario_oauth(
                     proveedor='github',
-                    proveedor_id=str(usuario_info.get('id')),
+                    proveedor_id=sub,
                     email=email,
                     nombre=usuario_info.get('name') or usuario_info.get('login'),
                     foto_url=usuario_info.get('avatar_url')

@@ -179,7 +179,7 @@
         
         <div style="background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px; padding:16px; margin-bottom:16px;">
             <h4 style="margin-top:0;">Crear repositorio nuevo</h4>
-            <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:10px; align-items:end;">
+            <div class="grid-crear-repo">
                 <div>
                     <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Nombre</label>
                     <input id="github-nuevo-repo-nombre" type="text" placeholder="mi-repo-migracion" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
@@ -202,7 +202,7 @@
             <div id="github-crear-repo-resultado" style="margin-top:12px; font-size:13px; color:#333;"></div>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1.1fr 0.9fr; gap:16px;">
+        <div class="grid-repos-github">
             <div style="background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px; padding:16px;">
                 <h4 style="margin-top:0;">Repositorios del usuario</h4>
                 <div id="github-repos-container" style="max-height:320px; overflow-y:auto;">
@@ -350,6 +350,30 @@
     color: #244a7c;
     font-size: 13px;
     font-weight: 600;
+}
+.grid-crear-repo {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+}
+.grid-repos-github {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .panel-conexiones {
+        grid-template-columns: 1fr !important;
+        gap: 20px;
+    }
+    .grid-crear-repo {
+        grid-template-columns: 1fr !important;
+    }
+    .grid-repos-github {
+        grid-template-columns: 1fr !important;
+    }
 }
 </style>
 

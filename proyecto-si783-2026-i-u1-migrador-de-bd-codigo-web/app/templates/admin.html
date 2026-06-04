@@ -39,39 +39,41 @@
         <!-- Listar Usuarios -->
         <div class="seccion-admin">
             <h2>Usuarios Registrados</h2>
-            <table class="tabla-usuarios">
-                <thead>
-                    <tr>
-                        <th>Usuario</th>
-                        <th>Email</th>
-                        <th>Rol</th>
-                        <th>Verificado</th>
-                        <th>Creado</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for usuario in usuarios %}
-                    <tr>
-                        <td>{{ usuario[1] }}</td>
-                        <td>{{ usuario[2] }}</td>
-                        <td><span class="badge-{{ usuario[3].lower() }}">{{ usuario[3] }}</span></td>
-                        <td><span class="badge-{{ 'verificado' if usuario[5] else 'no-verificado' }}">{{ 'Sí' if usuario[5] else 'No' }}</span></td>
-                        <td>{{ usuario[4] }}</td>
-                        <td>
-                            {% if usuario[3] != 'admin' %}
-                                <form method="POST" action="{{ url_for('principal.eliminar_usuario') }}" onsubmit="return confirm('¿Eliminar al usuario {{ usuario[1] }}?');">
-                                    <input type="hidden" name="usuario_id" value="{{ usuario[0] }}">
-                                    <button type="submit" class="boton-eliminar">Eliminar</button>
-                                </form>
-                            {% else %}
-                                <span class="texto-admin">Admin</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="tabla-contenedor">
+                <table class="tabla-usuarios">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Verificado</th>
+                            <th>Creado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios %}
+                        <tr>
+                            <td>{{ usuario[1] }}</td>
+                            <td>{{ usuario[2] }}</td>
+                            <td><span class="badge-{{ usuario[3].lower() }}">{{ usuario[3] }}</span></td>
+                            <td><span class="badge-{{ 'verificado' if usuario[5] else 'no-verificado' }}">{{ 'Sí' if usuario[5] else 'No' }}</span></td>
+                            <td>{{ usuario[4] }}</td>
+                            <td>
+                                {% if usuario[3] != 'admin' %}
+                                    <form method="POST" action="{{ url_for('principal.eliminar_usuario') }}" onsubmit="return confirm('¿Eliminar al usuario {{ usuario[1] }}?');">
+                                        <input type="hidden" name="usuario_id" value="{{ usuario[0] }}">
+                                        <button type="submit" class="boton-eliminar">Eliminar</button>
+                                    </form>
+                                {% else %}
+                                    <span class="texto-admin">Admin</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -105,7 +107,7 @@
     .seccion-admin h2 {
         margin-bottom: 20px;
         color: #333;
-        border-bottom: 2px solid #4CAF50;
+        border-bottom: 2px solid #244a7c;
         padding-bottom: 10px;
     }
 
@@ -132,7 +134,7 @@
     .boton-admin {
         width: 100%;
         padding: 12px;
-        background-color: #4CAF50;
+        background-color: #244a7c;
         color: white;
         border: none;
         border-radius: 4px;
@@ -142,7 +144,7 @@
     }
 
     .boton-admin:hover {
-        background-color: #45a049;
+        background-color: #1d3d66;
     }
 
     .boton-eliminar {
@@ -175,10 +177,17 @@
         border-radius: 4px;
     }
 
+    .tabla-contenedor {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-top: 15px;
+    }
+
     .tabla-usuarios {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 15px;
+        margin-top: 0;
     }
 
     .tabla-usuarios th,
@@ -186,6 +195,7 @@
         padding: 12px;
         text-align: left;
         border-bottom: 1px solid #ddd;
+        white-space: nowrap;
     }
 
     .tabla-usuarios th {
@@ -216,7 +226,7 @@
     }
 
     .badge-verificado {
-        background-color: #4CAF50;
+        background-color: #10b981;
         color: white;
         padding: 4px 8px;
         border-radius: 4px;

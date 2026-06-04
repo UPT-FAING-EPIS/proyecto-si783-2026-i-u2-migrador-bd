@@ -15,7 +15,8 @@
         }
         .usuario-nombre {
             font-size: 14px;
-            color: #666;
+            color: #ffffff;
+            font-weight: 500;
         }
         .rol-badge {
             background-color: #d32f2f;
@@ -52,6 +53,13 @@
     <nav class="barra-nav">
         <div class="contenedor-nav">
             <a href="/" class="logo">MigradorBD</a>
+            <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
             <div class="enlaces-nav">
                 {% if session.usuario_id %}
                     <a href="/" class="{% if request.path == '/' %}activo{% endif %}">Inicio</a>
@@ -82,5 +90,26 @@
     <main class="contenido">
         {% block contenido %}{% endblock %}
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('menuToggle');
+            const enlacesNav = document.querySelector('.enlaces-nav');
+            
+            if (menuToggle && enlacesNav) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    enlacesNav.classList.toggle('abierto');
+                });
+                
+                // Cerrar el menú si se hace clic fuera de él
+                document.addEventListener('click', function(e) {
+                    if (!enlacesNav.contains(e.target) && e.target !== menuToggle) {
+                        enlacesNav.classList.remove('abierto');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
