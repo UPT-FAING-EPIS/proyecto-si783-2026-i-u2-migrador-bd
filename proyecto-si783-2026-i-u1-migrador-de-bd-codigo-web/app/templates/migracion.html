@@ -175,7 +175,7 @@
         </button>
         <button onclick="cambiarTab('github')" id="tab-github"
             style="padding:12px 20px; background:transparent; border:none; border-bottom:3px solid transparent; color:#999; font-weight:bold; cursor:pointer; font-size:14px;">
-            GitHub
+            <i class="devicon-github-original colored" style="margin-right: 5px; font-size: 16px; vertical-align: middle; color: #333;"></i>GitHub
         </button>
     </div>
     
@@ -209,17 +209,17 @@
         </div>
         <p id="porcentaje" style="font-size:28px; text-align:center; color:#1a73e8;">0%</p>
         
-        <div style="margin:15px 0;">
-            <button onclick="iniciarMigracion()" id="btn-iniciar" style="padding:12px 30px; background:#244a7c; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; margin-right:10px;">
+        <div style="margin:15px 0; display:flex; flex-wrap:wrap; gap:10px;">
+            <button onclick="iniciarMigracion()" id="btn-iniciar" style="padding:12px 30px; background:#244a7c; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; flex:1; min-width:140px;">
                 Iniciar Migracion
             </button>
-            <button onclick="pausarMigracion()" style="padding:12px 30px; background:#5f6c7b; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; margin-right:10px;">
+            <button onclick="pausarMigracion()" id="btn-pausar" style="padding:12px 30px; background:#5f6c7b; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; flex:1; min-width:140px;">
                 Pausar
             </button>
-            <button id="btn-crear" onclick="crearEstructura()" style="padding:12px 20px; background:#364a63; color:white; border:none; border-radius:4px; font-size:14px; margin-right:8px;">
+            <button id="btn-crear" onclick="crearEstructura()" style="padding:12px 20px; background:#364a63; color:white; border:none; border-radius:4px; font-size:14px; cursor:pointer; flex:1; min-width:140px;">
                 Crear Tablas
             </button>
-            <button onclick="descargar()" id="btn-descargar" style="padding:12px 30px; background:#244a7c; color:white; border:none; border-radius:4px; font-size:16px;">
+            <button onclick="descargar()" id="btn-descargar" style="padding:12px 30px; background:#244a7c; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; flex:1; min-width:140px;">
                 Descargar
             </button>
         </div>
