@@ -1121,23 +1121,29 @@ function cambiarTab(tab) {
     document.getElementById('tab-content-migracion').style.display = 'none';
     document.getElementById('tab-content-historial').style.display = 'none';
     document.getElementById('tab-content-github').style.display = 'none';
-    
+
     // Mostrar pestaña seleccionada
     document.getElementById('tab-content-' + tab).style.display = 'block';
-    
+
     // Actualizar estilos de botones
     document.getElementById('tab-migracion').style.borderBottomColor = tab === 'migracion' ? '#244a7c' : 'transparent';
     document.getElementById('tab-migracion').style.color = tab === 'migracion' ? '#244a7c' : '#6d7c92';
-    
+
     document.getElementById('tab-historial').style.borderBottomColor = tab === 'historial' ? '#244a7c' : 'transparent';
     document.getElementById('tab-historial').style.color = tab === 'historial' ? '#244a7c' : '#6d7c92';
 
     document.getElementById('tab-github').style.borderBottomColor = tab === 'github' ? '#244a7c' : 'transparent';
     document.getElementById('tab-github').style.color = tab === 'github' ? '#244a7c' : '#6d7c92';
-    
-    // Cargar historial cuando se abre la pestaña
+
+    // Gestionar auto-refresco del historial
+    if (_historialAutoRefreshInterval) {
+        clearInterval(_historialAutoRefreshInterval);
+        _historialAutoRefreshInterval = null;
+    }
     if (tab === 'historial') {
+        // Cargar inmediatamente y luego cada 10 s mientras la pestaña esté activa
         cargarHistorial();
+        _historialAutoRefreshInterval = setInterval(cargarHistorial, 10000);
     }
 
     if (tab === 'github') {
@@ -1429,59 +1435,81 @@ async function subirArchivoGithub() {
     }
 }
 
+let _historialAutoRefreshInterval = null;
+
 async function cargarHistorial() {
+    const container = document.getElementById('historial-container');
+    // Mostrar skeleton solo si aún muestra el texto inicial de carga
+    if (container && container.innerHTML.includes('Cargando historial')) {
+        container.innerHTML = `
+        <div style="animation:pulse-hist 1.2s ease-in-out infinite;">
+            ${[1,2].map(() => `
+            <div style="background:#edf2f7; border-radius:6px; padding:14px; margin-bottom:12px; border-left:4px solid #d0d8e8;">
+                <div style="height:16px; background:#d0d8e8; border-radius:4px; width:60%; margin-bottom:8px;"></div>
+                <div style="height:11px; background:#d0d8e8; border-radius:4px; width:40%;"></div>
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;">
+                    ${[1,2,3,4].map(() => `<div style="background:#c8d2e0; padding:20px; border-radius:4px;"></div>`).join('')}
+                </div>
+            </div>`).join('')}
+        </div>
+        <style>@keyframes pulse-hist{0%,100%{opacity:1}50%{opacity:.55}}</style>`;
+    }
+
     try {
-        const resp = await fetch('/api/historial');
+        // cache: 'no-store' evita que el navegador sirva datos viejos
+        const resp = await fetch('/api/historial', { cache: 'no-store' });
         const datos = await resp.json();
-        const container = document.getElementById('historial-container');
-        
+
         if (!datos.historial || datos.historial.length === 0) {
             container.innerHTML = '<p style="text-align:center; color:#999; padding:40px;">No hay migraciones registradas todavía.</p>';
             return;
         }
-        
+
         let html = '';
-        // Mostrar en orden inverso (más recientes primero)
-        datos.historial.slice().reverse().forEach((migracion, idx) => {
-            const fecha = new Date(migracion.timestamp).toLocaleString();
-            const duracion = migracion.duracion_segundos ? migracion.duracion_segundos.toFixed(2) : '—';
-            const estado = migracion.metricas.errores === 0 ? 
-                '<span style="color:#244a7c; font-weight:bold;">✓ ÉXITO</span>' : 
-                '<span style="color:#244a7c; font-weight:bold;">✗ CON ERRORES</span>';
-            
+        // El servidor ya devuelve los datos ordenados más reciente primero
+        datos.historial.forEach((migracion, idx) => {
+            const tsRaw = migracion.timestamp || migracion.fecha || '';
+            const fecha = tsRaw ? new Date(tsRaw).toLocaleString() : '—';
+            const duracion = migracion.duracion_segundos
+                ? migracion.duracion_segundos.toFixed(2) : '—';
+            const m = migracion.metricas || {};
+            const errCount = m.errores ?? 0;
+            const estado = errCount === 0
+                ? '<span style="color:#4CAF50; font-weight:bold;">✓ ÉXITO</span>'
+                : '<span style="color:#f44336; font-weight:bold;">✗ CON ERRORES</span>';
+
             html += `
             <div style="background:#edf2f7; border-radius:6px; padding:14px; margin-bottom:12px; border-left:4px solid #244a7c;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <strong>#${migracion.id} | ${migracion.archivo_origen} → ${migracion.motor_destino}</strong>
+                        <strong>#${idx + 1} | ${migracion.archivo_origen || '—'} → ${migracion.motor_destino || '—'}</strong>
                         <div style="font-size:12px; color:#888; margin-top:4px;">
-                            ${fecha} | ${migracion.ip} | Duración: ${duracion}s
+                            ${fecha}${migracion.ip ? ' | ' + migracion.ip : ''} | Duración: ${duracion}s
                         </div>
                     </div>
                     <div>${estado}</div>
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;">
                     <div style="background:white; padding:8px; border-radius:4px; text-align:center; font-size:12px;">
-                        <strong>${migracion.metricas.tablas_ok}</strong> tablas
+                        <strong>${m.tablas_ok ?? 0}</strong> tablas
                     </div>
                     <div style="background:white; padding:8px; border-radius:4px; text-align:center; font-size:12px;">
-                        <strong>${migracion.metricas.extraidos}</strong> extraídos
+                        <strong>${m.extraidos ?? 0}</strong> extraídos
                     </div>
                     <div style="background:white; padding:8px; border-radius:4px; text-align:center; font-size:12px;">
-                        <strong>${migracion.metricas.cargados}</strong> cargados
+                        <strong>${m.cargados ?? 0}</strong> cargados
                     </div>
                     <div style="background:white; padding:8px; border-radius:4px; text-align:center; font-size:12px;">
-                        <strong style="color:#244a7c;">${migracion.metricas.errores}</strong> errores
+                        <strong style="color:${errCount > 0 ? '#f44336' : '#244a7c'};">${errCount}</strong> errores
                     </div>
                 </div>
-            </div>
-            `;
+            </div>`;
         });
-        
+
         container.innerHTML = html;
     } catch (e) {
         console.error('Error cargando historial:', e);
-        document.getElementById('historial-container').innerHTML = '<p style="color:#244a7c;">Error al cargar historial</p>';
+        container.innerHTML = '<p style="color:#f44336; text-align:center; padding:20px;">Error al cargar historial. Reintentando...</p>';
     }
 }
 </script>

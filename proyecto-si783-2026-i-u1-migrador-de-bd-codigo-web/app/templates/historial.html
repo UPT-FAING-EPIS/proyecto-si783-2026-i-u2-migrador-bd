@@ -5,14 +5,29 @@
 {% block contenido %}
 <h2>Historial de Operaciones</h2>
 
-<!-- Migraciones completadas -->
-<h3 style="margin-top:30px;">Migraciones realizadas</h3>
+<!-- Indicador de actualización en tiempo real -->
+<div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:13px; color:#5f6c7b;">
+    <span id="rt-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#4CAF50; animation:pulse-dot 2s infinite;"></span>
+    <span>Actualización en tiempo real activa</span>
+    <span id="rt-hora" style="margin-left:auto; color:#aaa;"></span>
+</div>
+<style>
+@keyframes pulse-dot {
+    0%, 100% { opacity:1; transform:scale(1); }
+    50%       { opacity:0.4; transform:scale(0.7); }
+}
+</style>
+
+<!-- Migraciones completadas — el servidor ya las envía ordenadas: más reciente primero -->
+<h3 id="seccion-migraciones" style="margin-top:10px;">Migraciones realizadas</h3>
+<div id="migraciones-container">
 {% if historial %}
     {% for item in historial %}
-    <div style="background:white; padding:20px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <div style="background:white; padding:20px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-left:4px solid #244a7c;">
         <h4 style="margin:0 0 10px;">
             Migración #{{ loop.index }}
-            <span style="font-size:13px; color:#888; font-weight:normal;">— {{ item.fecha[:19].replace('T',' ') }}</span>
+            {% set ts = item.timestamp if item.timestamp is defined else (item.fecha if item.fecha is defined else '') %}
+            <span style="font-size:13px; color:#888; font-weight:normal;">— {{ ts[:19]|replace('T',' ') if ts else '—' }}</span>
         </h4>
         <p style="margin:4px 0;"><strong>Origen:</strong> {{ item.archivo_origen or '—' }}</p>
         <p style="margin:4px 0;"><strong>Destino:</strong> {{ item.motor_destino }}</p>
@@ -38,15 +53,16 @@
     </div>
     {% endfor %}
 {% else %}
-    <div style="text-align:center; padding:30px; background:white; border-radius:8px;">
+    <div id="empty-migraciones" style="text-align:center; padding:30px; background:white; border-radius:8px;">
         <p style="color:#999; font-size:16px;">No hay migraciones registradas todavía.</p>
         <a href="/configuracion" style="padding:10px 20px; background:#2196F3; color:white; text-decoration:none; border-radius:4px;">Iniciar una migración</a>
     </div>
 {% endif %}
+</div>
 
-<!-- Log detallado -->
+<!-- Log detallado — el servidor ya los envía ordenados: más reciente primero -->
 <h3 style="margin-top:40px;">Log de actividad del sistema</h3>
-<div style="background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:40px;">
+<div id="logs-container" style="background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:40px;">
     {% if logs %}
     <table style="width:100%; border-collapse:collapse; font-size:13px;">
         <thead>
@@ -59,7 +75,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for entrada in logs|reverse %}
+            {% for entrada in logs %}
             <tr style="border-bottom:1px solid #f0f0f0;
                 {% if entrada.tipo == 'error' %}background:#fff8f8;{% elif entrada.tipo == 'warning' %}background:#fffde7;{% endif %}">
                 <td style="padding:8px 14px; color:#aaa;">{{ loop.index }}</td>
@@ -85,7 +101,135 @@
 </div>
 
 <script>
-// Refrescar la página cada 30 s para mostrar nuevos logs
-setTimeout(() => location.reload(), 30000);
+// ── Polling en tiempo real: cada 5 s consulta /api/historial ──
+// Solo actualiza el DOM si los datos realmente cambiaron (evita parpadeo).
+let _ultimoHashHistorial = '{{ historial|length }}';
+let _ultimoHashLogs = '{{ logs|length }}';
+
+function _hashSimple(arr) {
+    if (!arr || arr.length === 0) return '0';
+    const primero = arr[0];
+    const ultimo  = arr[arr.length - 1];
+    return arr.length + '|' +
+        (primero.timestamp || primero.fecha || '') + '|' +
+        (ultimo.timestamp  || ultimo.fecha  || '');
+}
+
+function _renderMigraciones(lista) {
+    if (!lista || lista.length === 0) {
+        return `<div id="empty-migraciones" style="text-align:center; padding:30px; background:white; border-radius:8px;">
+            <p style="color:#999; font-size:16px;">No hay migraciones registradas todavía.</p>
+            <a href="/configuracion" style="padding:10px 20px; background:#2196F3; color:white; text-decoration:none; border-radius:4px;">Iniciar una migración</a>
+        </div>`;
+    }
+    return lista.map((item, idx) => {
+        const fechaRaw = item.timestamp || item.fecha || '';
+        const fecha = fechaRaw ? fechaRaw.slice(0, 19).replace('T', ' ') : '—';
+        const m = item.metricas || {};
+        const ok  = m.tablas_ok  ?? 0;
+        const ext = m.extraidos  ?? 0;
+        const car = m.cargados   ?? 0;
+        const err = m.errores    ?? 0;
+        return `
+        <div style="background:white; padding:20px; border-radius:8px; margin-bottom:20px;
+                    box-shadow:0 2px 8px rgba(0,0,0,0.08); border-left:4px solid #244a7c;">
+            <h4 style="margin:0 0 10px;">
+                Migración #${idx + 1}
+                <span style="font-size:13px; color:#888; font-weight:normal;">— ${fecha}</span>
+            </h4>
+            <p style="margin:4px 0;"><strong>Origen:</strong> ${item.archivo_origen || '—'}</p>
+            <p style="margin:4px 0;"><strong>Destino:</strong> ${item.motor_destino || '—'}</p>
+            <p style="margin:4px 0;"><strong>Tablas totales:</strong> ${item.total_tablas ?? '—'}</p>
+            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:12px;">
+                <div style="text-align:center; padding:10px; background:#e8f5e9; border-radius:5px;">
+                    <span style="font-size:22px; font-weight:bold; color:#4CAF50;">${ok}</span><br><small>Tablas migradas</small>
+                </div>
+                <div style="text-align:center; padding:10px; background:#e3f2fd; border-radius:5px;">
+                    <span style="font-size:22px; font-weight:bold; color:#2196F3;">${ext}</span><br><small>Registros extraídos</small>
+                </div>
+                <div style="text-align:center; padding:10px; background:#fff3e0; border-radius:5px;">
+                    <span style="font-size:22px; font-weight:bold; color:#FF9800;">${car}</span><br><small>Registros cargados</small>
+                </div>
+                <div style="text-align:center; padding:10px; background:#ffebee; border-radius:5px;">
+                    <span style="font-size:22px; font-weight:bold; color:#f44336;">${err}</span><br><small>Errores</small>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function _tipoLabel(tipo) {
+    if (tipo === 'error')   return '<span style="color:#f44336; font-weight:bold;">ERROR</span>';
+    if (tipo === 'warning') return '<span style="color:#FF9800; font-weight:bold;">AVISO</span>';
+    return '<span style="color:#4CAF50;">INFO</span>';
+}
+
+function _renderLogs(lista) {
+    if (!lista || lista.length === 0) {
+        return '<p style="text-align:center; color:#999; padding:30px;">No hay eventos registrados todavía.</p>';
+    }
+    const filas = lista.map((e, i) => {
+        const bg = e.tipo === 'error'
+            ? 'background:#fff8f8;'
+            : e.tipo === 'warning' ? 'background:#fffde7;' : '';
+        return `<tr style="border-bottom:1px solid #f0f0f0; ${bg}">
+            <td style="padding:8px 14px; color:#aaa;">${i + 1}</td>
+            <td style="padding:8px 14px; white-space:nowrap;">${e.fecha || ''}</td>
+            <td style="padding:8px 14px;">${_tipoLabel(e.tipo)}</td>
+            <td style="padding:8px 14px; color:#666;">${e.ip || '—'}</td>
+            <td style="padding:8px 14px;">${e.mensaje || ''}</td>
+        </tr>`;
+    }).join('');
+    return `<table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+            <tr style="background:#f5f5f5;">
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">#</th>
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Fecha / Hora</th>
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Tipo</th>
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">IP</th>
+                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Mensaje</th>
+            </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+    </table>`;
+}
+
+async function actualizarHistorial() {
+    try {
+        const resp = await fetch('/api/historial', { cache: 'no-store' });
+        if (!resp.ok) return;
+        const datos = await resp.json();
+
+        // Solo reescribir migraciones si cambiaron
+        const hashH = _hashSimple(datos.historial);
+        if (hashH !== _ultimoHashHistorial) {
+            _ultimoHashHistorial = hashH;
+            document.getElementById('migraciones-container').innerHTML =
+                _renderMigraciones(datos.historial);
+        }
+
+        // Solo reescribir logs si cambiaron
+        const hashL = _hashSimple(datos.logs);
+        if (hashL !== _ultimoHashLogs) {
+            _ultimoHashLogs = hashL;
+            document.getElementById('logs-container').innerHTML =
+                _renderLogs(datos.logs);
+        }
+
+        // Mostrar hora de última actualización
+        document.getElementById('rt-hora').textContent =
+            'Última actualización: ' + new Date().toLocaleTimeString();
+        document.getElementById('rt-dot').style.background = '#4CAF50';
+
+    } catch (e) {
+        // Error de red: poner punto rojo
+        const dot = document.getElementById('rt-dot');
+        if (dot) dot.style.background = '#f44336';
+    }
+}
+
+// Primera actualización al cargar + polling cada 5 s
+actualizarHistorial();
+setInterval(actualizarHistorial, 5000);
 </script>
 {% endblock %}

@@ -626,9 +626,20 @@ def migracion():
 @requerir_login
 def historial():
     usuario_actual = obtener_usuario_actual()
+    # Ordenar historial: más reciente primero (orden estable)
+    historial_ordenado = sorted(
+        estado_app['historial'],
+        key=lambda x: x.get('timestamp', x.get('fecha', '')),
+        reverse=True
+    )
+    logs_ordenados = sorted(
+        estado_app['logs'],
+        key=lambda x: x.get('fecha', ''),
+        reverse=True
+    )
     return render_template('historial.html',
-                           historial=estado_app['historial'],
-                           logs=estado_app['logs'],
+                           historial=historial_ordenado,
+                           logs=logs_ordenados,
                            usuario=usuario_actual)
 
 @principal.route('/monitoreo-ip')
@@ -1272,7 +1283,18 @@ def api_estado():
 
 @principal.route('/api/historial')
 def api_historial():
-    return jsonify({'historial': estado_app['historial'], 'logs': estado_app['logs']})
+    # Devolver historial ordenado: más reciente primero
+    historial_ordenado = sorted(
+        estado_app['historial'],
+        key=lambda x: x.get('timestamp', x.get('fecha', '')),
+        reverse=True
+    )
+    resp = jsonify({'historial': historial_ordenado, 'logs': estado_app['logs']})
+    # Sin caché para datos en tiempo real
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 @principal.route('/api/ips')
 def api_ips():
