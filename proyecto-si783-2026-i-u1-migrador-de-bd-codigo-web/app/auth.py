@@ -102,6 +102,16 @@ def inicializar_bd():
         try:
             # Comprobar que la tabla usuarios existe
             res = run_query('SELECT COUNT(*) FROM usuarios', fetchone=True)
+            if res:
+                # Intentar añadir columnas nuevas si faltan (ignorar error si ya existen)
+                try:
+                    run_query('ALTER TABLE usuarios ADD COLUMN foto_perfil LONGTEXT', commit=True)
+                except Exception:
+                    pass
+                try:
+                    run_query('ALTER TABLE usuarios ADD COLUMN descripcion VARCHAR(500)', commit=True)
+                except Exception:
+                    pass
         except Exception:
             # No existe la tabla: intentar crear usando DDL compatible con MySQL
             try:
@@ -115,7 +125,9 @@ def inicializar_bd():
                         creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         activo TINYINT(1) NOT NULL DEFAULT 1,
                         verification_code VARCHAR(100),
-                        verified TINYINT(1) NOT NULL DEFAULT 0
+                        verified TINYINT(1) NOT NULL DEFAULT 0,
+                        foto_perfil LONGTEXT,
+                        descripcion VARCHAR(500)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 ''', commit=True)
                 run_query('''
@@ -151,7 +163,9 @@ def inicializar_bd():
                 creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 activo BOOLEAN DEFAULT 1,
                 verification_code TEXT,
-                verified BOOLEAN DEFAULT 0
+                verified BOOLEAN DEFAULT 0,
+                foto_perfil TEXT,
+                descripcion TEXT
             )
         ''')
 
@@ -164,6 +178,12 @@ def inicializar_bd():
 
         if 'verified' not in columns:
             c.execute("ALTER TABLE usuarios ADD COLUMN verified BOOLEAN DEFAULT 0")
+        
+        if 'foto_perfil' not in columns:
+            c.execute("ALTER TABLE usuarios ADD COLUMN foto_perfil TEXT")
+        
+        if 'descripcion' not in columns:
+            c.execute("ALTER TABLE usuarios ADD COLUMN descripcion TEXT")
 
         # Crear tabla oauth_usuarios si no existe
         c.execute('''
@@ -434,5 +454,47 @@ def crear_nuevo_admin(usuario_creador_id, usuario_nuevo, email_nuevo):
         return True, f'Admin creado. Contraseña temporal: {contraseña_temporal}'
     except sqlite3.IntegrityError:
         return False, 'El usuario o email ya existe'
+    except Exception as e:
+        return False, str(e)
+
+def obtener_perfil_usuario(usuario_id):
+    """Obtiene el perfil completo del usuario incluyendo foto y descripción."""
+    try:
+        resultado = run_query(
+            'SELECT id, usuario, email, rol, foto_perfil, descripcion FROM usuarios WHERE id = ?',
+            (usuario_id,),
+            fetchone=True
+        )
+        if resultado:
+            return {
+                'id': resultado[0],
+                'usuario': resultado[1],
+                'email': resultado[2],
+                'rol': resultado[3],
+                'foto_perfil': resultado[4],
+                'descripcion': resultado[5]
+            }
+    except Exception:
+        pass
+    return None
+
+def actualizar_perfil_usuario(usuario_id, foto_perfil=None, descripcion=None):
+    """Actualiza la foto de perfil y/o descripción del usuario."""
+    try:
+        if foto_perfil is not None:
+            run_query(
+                'UPDATE usuarios SET foto_perfil = ? WHERE id = ?',
+                (foto_perfil, usuario_id),
+                commit=True
+            )
+        
+        if descripcion is not None:
+            run_query(
+                'UPDATE usuarios SET descripcion = ? WHERE id = ?',
+                (descripcion, usuario_id),
+                commit=True
+            )
+        
+        return True, 'Perfil actualizado correctamente'
     except Exception as e:
         return False, str(e)

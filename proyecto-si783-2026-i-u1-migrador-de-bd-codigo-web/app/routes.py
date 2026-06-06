@@ -21,7 +21,8 @@ from carga.cargador import CargadorDestino
 from app.auth import (
     inicializar_bd, verificar_usuario, registrar_usuario, requerir_login,
     requerir_admin, obtener_usuario_actual, crear_nuevo_admin, DB_PATH,
-    registrar_usuario_oauth, verificar_codigo, enviar_email_notificacion
+    registrar_usuario_oauth, verificar_codigo, enviar_email_notificacion,
+    obtener_perfil_usuario, actualizar_perfil_usuario
 )
 
 principal = Blueprint('principal', __name__)
@@ -128,6 +129,11 @@ def login():
             session['usuario_id'] = usuario_data['id']
             session['usuario'] = usuario_data['usuario']
             session['rol'] = usuario_data['rol']
+            perfil = obtener_perfil_usuario(usuario_data['id'])
+            if perfil and perfil.get('foto_perfil'):
+                session['tiene_foto'] = True
+            else:
+                session['tiene_foto'] = False
             _registrar_log(f'Usuario {usuario} iniciado sesión', 'info', request.remote_addr)
             return redirect(url_for('principal.migracion'))
         else:
@@ -207,6 +213,14 @@ def oauth_login(proveedor):
         from app.oauth import oauth
         redirect_uri = url_for('principal.oauth_callback', proveedor='github', _external=True)
         return oauth.github.authorize_redirect(redirect_uri)
+
+@principal.route('/auth/github/desconectar')
+def oauth_github_desconectar():
+    """Desconecta la cuenta de GitHub."""
+    session.pop('github_access_token', None)
+    session.pop('github_token_type', None)
+    return redirect(url_for('principal.index'))
+
     return redirect(url_for('principal.login'))
 
 @principal.route('/auth/<proveedor>/callback')
@@ -244,6 +258,12 @@ def oauth_callback(proveedor):
                     session['usuario_id'] = usuario_data['id']
                     session['usuario'] = usuario_data['usuario']
                     session['rol'] = usuario_data['rol']
+                    from app.auth import obtener_perfil_usuario
+                    perfil = obtener_perfil_usuario(usuario_data['id'])
+                    if perfil and perfil.get('foto_perfil'):
+                        session['tiene_foto'] = True
+                    else:
+                        session['tiene_foto'] = False
                     _registrar_log(
                         f'Usuario {usuario_data["usuario"]} inició sesión con Google',
                         'info', request.remote_addr
@@ -294,6 +314,12 @@ def oauth_callback(proveedor):
                     session['usuario_id'] = usuario_data['id']
                     session['usuario'] = usuario_data['usuario']
                     session['rol'] = usuario_data['rol']
+                    from app.auth import obtener_perfil_usuario
+                    perfil = obtener_perfil_usuario(usuario_data['id'])
+                    if perfil and perfil.get('foto_perfil'):
+                        session['tiene_foto'] = True
+                    else:
+                        session['tiene_foto'] = False
                     _registrar_log(
                         f'Usuario {usuario_data["usuario"]} inició sesión con GitHub',
                         'info', request.remote_addr
@@ -447,6 +473,23 @@ def api_github_archivos_locales():
         return jsonify({'estado': 'error', 'mensaje': str(e)}), 500
 
 
+@principal.route('/api/github/archivos-migrados', methods=['GET'])
+@requerir_login
+def api_github_archivos_migrados():
+    """Retorna un archivo virtual si hay una migración en memoria."""
+    try:
+        archivos = []
+        if estado_app.get('destino'):
+            motor = estado_app['destino'].motor
+            ext = _extension_para_motor(motor)
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            nombre = f'migracion_{motor.replace(" ", "_")}_{timestamp}{ext}'
+            archivos.append({'nombre': nombre})
+        return jsonify({'estado': 'exito', 'archivos': archivos})
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': str(e)}), 500
+
+
 @principal.route('/api/github/subir', methods=['POST'])
 @requerir_login
 def api_github_subir():
@@ -465,13 +508,26 @@ def api_github_subir():
     if not repo_full_name or not archivo:
         return jsonify({'estado': 'error', 'mensaje': 'Faltan repo o archivo'}), 400
 
-    local_path = os.path.join(_carpeta_upload_usuario(), secure_filename(archivo))
-    if not os.path.exists(local_path):
-        return jsonify({'estado': 'error', 'mensaje': f'Archivo no encontrado: {archivo}'}), 404
+    es_migrado = datos.get('es_migrado', False)
 
     try:
-        with open(local_path, 'rb') as f:
-            contenido = f.read()
+        if es_migrado and estado_app.get('destino'):
+            # Generar archivo en el momento de subir
+            resultado, ext, mimetype, es_binario = estado_app['destino'].generar_export(None)
+            if not resultado:
+                return jsonify({'estado': 'error', 'mensaje': 'No se pudo generar la exportación'}), 500
+                
+            if es_binario:
+                with open(resultado, 'rb') as f:
+                    contenido = f.read()
+            else:
+                contenido = resultado.encode('utf-8')
+        else:
+            local_path = os.path.join(_carpeta_upload_usuario(), secure_filename(archivo))
+            if not os.path.exists(local_path):
+                return jsonify({'estado': 'error', 'mensaje': f'Archivo no encontrado: {archivo}'}), 404
+            with open(local_path, 'rb') as f:
+                contenido = f.read()
 
         contenido_b64 = base64.b64encode(contenido).decode('utf-8')
         api_url = f'https://api.github.com/repos/{repo_full_name}/contents/{path_in_repo}'
@@ -647,6 +703,7 @@ def historial():
 def monitoreo_ip():
     usuario_actual = obtener_usuario_actual()
     return render_template('monitoreo_ip.html', ips=estado_app['ips'], usuario=usuario_actual)
+
 
 # Ruta de compatibilidad: redirigir /reporte a /historial
 @principal.route('/reporte')
@@ -1299,6 +1356,97 @@ def api_historial():
 @principal.route('/api/ips')
 def api_ips():
     return jsonify({'ips': estado_app['ips']})
+
+# ==================== RUTAS DE PERFIL ====================
+
+@principal.route('/perfil', methods=['GET'])
+@requerir_login
+def perfil():
+    """Muestra el perfil del usuario actual."""
+    from app.auth import obtener_perfil_usuario
+    usuario_id = session.get('usuario_id')
+    perfil_data = obtener_perfil_usuario(usuario_id)
+    
+    if not perfil_data:
+        return redirect(url_for('principal.login'))
+    
+    usuario_actual = obtener_usuario_actual()
+    return render_template('perfil.html', perfil=perfil_data, usuario=usuario_actual)
+
+@principal.route('/usuario/foto')
+@requerir_login
+def foto_perfil_route():
+    """Sirve la foto de perfil del usuario actual desde la base de datos."""
+    from app.auth import obtener_perfil_usuario
+    import base64
+    from flask import current_app
+    
+    usuario_id = session.get('usuario_id')
+    perfil = obtener_perfil_usuario(usuario_id)
+    if perfil and perfil.get('foto_perfil'):
+        data = perfil['foto_perfil']
+        if ',' in data:
+            header, encoded = data.split(',', 1)
+            mime = header.split(':')[1].split(';')[0]
+            try:
+                decoded = base64.b64decode(encoded)
+                return current_app.response_class(decoded, mimetype=mime)
+            except Exception:
+                pass
+    return '', 404
+
+@principal.route('/perfil/actualizar', methods=['POST'])
+@requerir_login
+def actualizar_perfil():
+    """Actualiza el perfil del usuario (foto y descripción)."""
+    from app.auth import actualizar_perfil_usuario, obtener_perfil_usuario
+    
+    usuario_id = session.get('usuario_id')
+    descripcion = request.form.get('descripcion', '').strip()
+    
+    # Limitar descripción a 500 caracteres
+    if len(descripcion) > 500:
+        descripcion = descripcion[:500]
+    
+    # Procesar foto de perfil si se subió
+    foto_perfil = None
+    if 'foto' in request.files:
+        archivo = request.files['foto']
+        if archivo and archivo.filename != '':
+            # Validar que sea una imagen
+            extensiones_permitidas = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+            if '.' in archivo.filename:
+                ext = archivo.filename.rsplit('.', 1)[1].lower()
+                if ext in extensiones_permitidas:
+                    # Leer archivo y convertir a base64
+                    contenido = archivo.read()
+                    foto_perfil = base64.b64encode(contenido).decode('utf-8')
+                    # Agregar prefijo para data URI
+                    mime_type = f'image/{ext}' if ext != 'jpg' else 'image/jpeg'
+                    foto_perfil = f'data:{mime_type};base64,{foto_perfil}'
+    
+    # Actualizar perfil
+    exito, mensaje = actualizar_perfil_usuario(usuario_id, foto_perfil, descripcion)
+    
+    if exito:
+        perfil_actualizado = obtener_perfil_usuario(usuario_id)
+        session['tiene_foto'] = bool(perfil_actualizado and perfil_actualizado.get('foto_perfil'))
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # AJAX request
+        if exito:
+            return jsonify({'estado': 'exito', 'mensaje': mensaje})
+        else:
+            return jsonify({'estado': 'error', 'mensaje': mensaje}), 400
+    else:
+        # Form submission
+        if exito:
+            _registrar_log(f'Usuario {session.get("usuario")} actualizó su perfil', 'info', request.remote_addr)
+            return redirect(url_for('principal.perfil'))
+        else:
+            perfil_data = obtener_perfil_usuario(usuario_id)
+            usuario_actual = obtener_usuario_actual()
+            return render_template('perfil.html', perfil=perfil_data, usuario=usuario_actual, error=mensaje)
 
 @socketio.on('conectar')
 def conectar():

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mi Perfil - MigradorBD{% endblock %}
+
+{% block contenido %}
+<div class="perfil-container">
+    <div class="perfil-card glass-panel">
+        <div class="perfil-header">
+            <h2>Mi Perfil</h2>
+        </div>
+        
+        {% if msj %}
+            <div class="alerta alerta-info">
+                {{ msj }}
+            </div>
+        {% endif %}
+        {% if error %}
+            <div class="alerta alerta-danger" style="background-color: #f8d7da; color: #721c24; border-left: 4px solid #f5c6cb;">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <div class="perfil-body">
+            <div class="perfil-avatar-section">
+                {% if perfil.foto_perfil %}
+                    <img src="{{ url_for('principal.foto_perfil_route') }}" alt="Perfil" class="avatar-large">
+                {% else %}
+                    <div class="avatar-large avatar-default-large">
+                        {{ session.usuario[0]|upper }}
+                    </div>
+                {% endif %}
+                <div class="perfil-info-basica">
+                    <h3>{{ perfil.usuario }}</h3>
+                    <p class="perfil-email">{{ perfil.email }}</p>
+                    <span class="rol-badge {% if perfil.rol == 'admin' %}admin{% else %}usuario{% endif %}">{{ perfil.rol.upper() }}</span>
+                </div>
+            </div>
+
+            <form action="{{ url_for('principal.actualizar_perfil') }}" method="POST" enctype="multipart/form-data" class="formulario-perfil">
+                <div class="grupo-formulario">
+                    <label for="foto">Cambiar foto de perfil</label>
+                    <div class="file-upload-wrapper">
+                        <input type="file" id="foto" name="foto" accept="image/*" class="file-input">
+                        <label for="foto" class="file-input-label">Seleccionar imagen...</label>
+                        <span class="file-name" id="file-name-display">Ningún archivo seleccionado</span>
+                    </div>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="descripcion">Descripción / Bio</label>
+                    <textarea id="descripcion" name="descripcion" rows="4" class="form-control" placeholder="Escribe algo sobre ti...">{{ perfil.descripcion or '' }}</textarea>
+                </div>
+
+                <div class="acciones-formulario">
+                    <button type="submit" class="btn btn-primario">Actualizar Perfil</button>
+                    <a href="/" class="btn btn-secundario">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('foto').addEventListener('change', function(e) {
+        var fileName = e.target.files[0] ? e.target.files[0].name : "Ningún archivo seleccionado";
+        document.getElementById('file-name-display').textContent = fileName;
+    });
+</script>
+{% endblock %}

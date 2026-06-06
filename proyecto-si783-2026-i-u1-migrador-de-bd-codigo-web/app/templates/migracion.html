@@ -24,7 +24,10 @@
         <!-- DETECTOR VISUAL EN TIEMPO REAL -->
         <div class="detector-container">
             <div class="detector-titulo">
-                <span>🔍 Detector de Base de Datos</span>
+                <span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; margin-top: -2px;"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                    Detector de Base de Datos
+                </span>
                 <span id="detector-estado-texto" style="font-size:11px; font-weight:normal; color:#718096;">Esperando archivo...</span>
             </div>
             <div class="detector-grid">
@@ -88,37 +91,37 @@
                 </div>
                 <div id="grupo-relacionales" style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;">
                     <button type="button" class="motor-opcion" data-motor="SQLite">
-                        <i class="devicon-sqlite-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>SQLite
+                        <i class="devicon-sqlite-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>SQLite <span style="font-size:11px; color:#888;">(.db)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="PostgreSQL">
-                        <i class="devicon-postgresql-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>PostgreSQL
+                        <i class="devicon-postgresql-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>PostgreSQL <span style="font-size:11px; color:#888;">(.sql)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="MySQL">
-                        <i class="devicon-mysql-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>MySQL
+                        <i class="devicon-mysql-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>MySQL <span style="font-size:11px; color:#888;">(.sql)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="MariaDB">
-                        <i class="devicon-mariadb-original colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>MariaDB
+                        <i class="devicon-mariadb-original colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>MariaDB <span style="font-size:11px; color:#888;">(.sql)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="Microsoft SQL Server">
-                        <i class="devicon-microsoftsqlserver-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Microsoft SQL Server
+                        <i class="devicon-microsoftsqlserver-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>SQL Server <span style="font-size:11px; color:#888;">(.sql)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="Oracle">
-                        <i class="devicon-oracle-original colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Oracle
+                        <i class="devicon-oracle-original colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Oracle <span style="font-size:11px; color:#888;">(.sql)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="Snowflake">
-                        <i class="devicon-database-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Snowflake
+                        <i class="devicon-database-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Snowflake <span style="font-size:11px; color:#888;">(.sql)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="Amazon Redshift">
-                        <i class="devicon-amazonwebservices-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Amazon Redshift
+                        <i class="devicon-amazonwebservices-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Amazon Redshift <span style="font-size:11px; color:#888;">(.sql)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="Azure SQL Database">
-                        <i class="devicon-azure-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Azure SQL Database
+                        <i class="devicon-azure-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Azure SQL <span style="font-size:11px; color:#888;">(.sql)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="IBM Db2">
-                        <i class="devicon-database-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>IBM Db2
+                        <i class="devicon-database-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>IBM Db2 <span style="font-size:11px; color:#888;">(.sql)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="Google BigQuery">
-                        <i class="devicon-googlecloud-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Google BigQuery
+                        <i class="devicon-googlecloud-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>BigQuery <span style="font-size:11px; color:#888;">(.sql)</span>
                     </button>
                 </div>
             </div>
@@ -131,26 +134,47 @@
                 <p style="font-size:12px; color:#6d7c92; margin:0 0 10px 0;">Incluye MongoDB Atlas y exportación para motores NoSQL populares.</p>
                 <div id="grupo-no-relacionales" style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;">
                     <button type="button" class="motor-opcion" data-motor="MongoDB">
-                        <i class="devicon-mongodb-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>MongoDB
+                        <i class="devicon-mongodb-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>MongoDB <span style="font-size:11px; color:#888;">(.json)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="Elasticsearch">
-                        <i class="devicon-elasticsearch-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Elasticsearch
+                        <i class="devicon-elasticsearch-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Elasticsearch <span style="font-size:11px; color:#888;">(.ndjson)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="Redis">
-                        <i class="devicon-redis-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Redis
+                        <i class="devicon-redis-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Redis <span style="font-size:11px; color:#888;">(.redis)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="Apache Cassandra">
-                        <i class="devicon-cassandra-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Apache Cassandra
+                        <i class="devicon-cassandra-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>Cassandra <span style="font-size:11px; color:#888;">(.cql)</span>
                     </button>
                     <button type="button" class="motor-opcion" data-motor="MongoDB Atlas">
-                        <i class="devicon-mongodb-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>MongoDB Atlas
+                        <i class="devicon-mongodb-plain colored" style="margin-right: 8px; font-size: 16px; vertical-align: middle;"></i>MongoDB Atlas <span style="font-size:11px; color:#888;">(.json)</span>
                     </button>
                 </div>
             </div>
             
             <div style="padding:15px; background:#f0f6ff; border:1px solid #d8e3f0; border-radius:8px;">
-                <p style="margin:0; color:#244a7c; font-size:13px; font-weight:bold;">💡 Ayuda:</p>
+                <p style="margin:0; color:#244a7c; font-size:13px; font-weight:bold;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; margin-top: -2px; color: #ffb700;"><path d="M9 21h6"></path><path d="M10.5 21v-3"></path><path d="M13.5 21v-3"></path><path d="M7.6 15A7.45 7.45 0 0 1 5 10.5C5 6.4 8.1 3 12 3s7 3.4 7 7.5a7.45 7.45 0 0 1-2.6 4.5"></path></svg>
+                    Ayuda:
+                </p>
                 <p style="margin:5px 0 0 0; color:#5f6c7b; font-size:12px;">Si el tipo de origen detectado no es correcto, después de subir el archivo podrás validarlo o cambiarlo manualmente.</p>
+            </div>
+
+            <div style="padding:15px; background:#f0fff4; border:1px solid #c6f6d5; border-radius:8px; margin-top:5px;">
+                <p style="margin:0; color:#22543d; font-size:13px; font-weight:bold; display:flex; align-items:center;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: #38a169;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Migración Robusta y Completa Garantizada
+                </p>
+                <p style="margin:8px 0 0 0; color:#276749; font-size:12px; line-height:1.5;">
+                    El motor de migración no solo copia tablas y datos. El sistema leerá la base de datos de origen y recreará la estructura lógica completa hacia el destino, incluyendo:
+                </p>
+                <ul style="margin:5px 0 0 0; padding-left:20px; color:#276749; font-size:12px; display:grid; grid-template-columns:1fr 1fr; gap:5px;">
+                    <li>Consultas y Vistas (Views)</li>
+                    <li>Procedimientos Almacenados</li>
+                    <li>Tablas y Relaciones (FK/PK)</li>
+                    <li>Triggers Automatizados</li>
+                    <li>Funciones Definidas</li>
+                    <li>Índices de Rendimiento</li>
+                </ul>
             </div>
         </div>
         
@@ -255,7 +279,7 @@
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
-            <a href="/auth/github" style="padding:10px 16px; background:#244a7c; color:white; text-decoration:none; border-radius:4px; font-weight:bold;">Conectar GitHub</a>
+            <a href="/auth/github" id="btn-conectar-github" style="padding:10px 16px; background:#244a7c; color:white; text-decoration:none; border-radius:4px; font-weight:bold;">Conectar GitHub</a>
             <button onclick="cargarGitHubData()" style="padding:10px 16px; background:#5f6c7b; color:white; border:none; border-radius:4px; cursor:pointer;">Actualizar repositorios</button>
         </div>
         
@@ -270,15 +294,15 @@
                     <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Descripción</label>
                     <input id="github-nuevo-repo-desc" type="text" placeholder="Repositorio para backups migrados" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
                 </div>
-                <div style="display:flex; gap:8px; align-items:center; padding-bottom:2px;">
-                    <div style="min-width:130px;">
+                <div style="display:flex; gap:8px; align-items:flex-end;">
+                    <div style="min-width:130px; flex:1;">
                         <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Visibilidad</label>
-                        <select id="github-nuevo-repo-visibilidad" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
+                        <select id="github-nuevo-repo-visibilidad" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; height: 39px; box-sizing: border-box;">
                             <option value="privado" selected>Privado</option>
                             <option value="publico">Público</option>
                         </select>
                     </div>
-                    <button onclick="crearRepoGithub()" style="padding:10px 16px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Crear repo</button>
+                    <button onclick="crearRepoGithub()" style="padding:0 16px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; height: 39px; white-space: nowrap;">Crear repo</button>
                 </div>
             </div>
             <div id="github-crear-repo-resultado" style="margin-top:12px; font-size:13px; color:#333;"></div>
@@ -286,8 +310,14 @@
 
         <div class="grid-repos-github">
             <div style="background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px; padding:16px;">
-                <h4 style="margin-top:0;">Repositorios del usuario</h4>
-                <div id="github-repos-container" style="max-height:320px; overflow-y:auto;">
+                <h4 style="margin-top:0; margin-bottom:10px;">Repositorios del usuario</h4>
+                <div style="position:relative; margin-bottom:12px;">
+                    <div style="position:absolute; left:10px; top:50%; transform:translateY(-50%); pointer-events:none; color:#999;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                    <input type="text" id="github-repo-search" oninput="filtrarRepos()" placeholder="Buscar repositorio..." style="width:100%; padding:8px 12px 8px 34px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
+                </div>
+                <div id="github-repos-container" style="max-height:320px; overflow-y:auto; overflow-x:hidden;">
                     <p style="color:#999;">Pulsa "Actualizar repositorios" para cargar tu lista.</p>
                 </div>
             </div>
@@ -300,13 +330,18 @@
                     <option value="">Cargando repositorios...</option>
                 </select>
 
-                <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Tus archivos subidos</label>
+                <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Tus archivos subidos (Origen)</label>
                 <select id="github-archivo" onchange="autocompletarPathGithub()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; margin-bottom:12px;">
                     <option value="">Cargando archivos...</option>
                 </select>
 
+                <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Tus archivos migrados (Destino)</label>
+                <select id="github-archivo-migrado" onchange="autocompletarPathGithubMigrado()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; margin-bottom:12px;">
+                    <option value="">(Ninguno)</option>
+                </select>
+
                 <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Ruta en el repositorio</label>
-                <input id="github-path" type="text" placeholder="backups/archivo.sql" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; margin-bottom:12px;">
+                <input id="github-path" type="text" placeholder="backups/ (o deja vacío)" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; margin-bottom:12px;">
 
                 <label style="display:block; margin-bottom:6px; font-size:13px; color:#555;">Rama</label>
                 <input id="github-branch" type="text" value="main" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; margin-bottom:12px;">
@@ -1267,7 +1302,15 @@ let estado_app = {};
 function autocompletarPathGithub() {
     const archivo = document.getElementById('github-archivo').value;
     const path = document.getElementById('github-path');
-    if (archivo && path && (!path.value || path.value === archivo)) {
+    if (archivo && path && !path.value) {
+        path.value = archivo;
+    }
+}
+
+function autocompletarPathGithubMigrado() {
+    const archivo = document.getElementById('github-archivo-migrado').value;
+    const path = document.getElementById('github-path');
+    if (archivo && path && !path.value) {
         path.value = archivo;
     }
 }
@@ -1279,6 +1322,31 @@ function sincronizarBranchRepo() {
     if (repo && branch) {
         branch.value = repo.default_branch || 'main';
     }
+}
+
+function renderReposList(repos) {
+    const reposContainer = document.getElementById('github-repos-container');
+    reposContainer.innerHTML = repos.length
+        ? repos.map(r => `
+            <div style="background:white; border:1px solid #e5e7eb; border-radius:6px; padding:10px; margin-bottom:10px; word-break:break-all;">
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <div>
+                        <strong style="color:#244a7c;">${r.full_name}</strong>
+                        <div style="font-size:12px; color:#666; margin-top:2px;">${r.description || 'Sin descripción'}</div>
+                    </div>
+                    <div style="align-self:flex-start;">
+                        <a href="${r.html_url}" target="_blank" rel="noopener" style="color:#1a73e8; text-decoration:none; font-size:12px; font-weight:bold; padding:4px 8px; background:#f0f6ff; border-radius:4px;">Abrir en GitHub ↗</a>
+                    </div>
+                </div>
+            </div>
+        `).join('')
+        : '<p style="color:#999;">No se encontraron repositorios.</p>';
+}
+
+function filtrarRepos() {
+    const busqueda = (document.getElementById('github-repo-search').value || '').toLowerCase();
+    const repos = githubReposCache.filter(r => r.full_name.toLowerCase().includes(busqueda));
+    renderReposList(repos);
 }
 
 async function cargarGitHubData() {
@@ -1300,43 +1368,51 @@ async function cargarGitHubData() {
         const archivosData = await archivosResp.json();
 
         if (reposData.estado === 'exito') {
+            const btnConectar = document.getElementById('btn-conectar-github');
+            if (btnConectar) {
+                btnConectar.textContent = 'Desconectar';
+                btnConectar.href = '/auth/github/desconectar';
+                btnConectar.style.background = '#e53e3e';
+            }
+
             githubReposCache = reposData.repos || [];
             repoSelect.innerHTML = githubReposCache.length
                 ? githubReposCache.map(r => `<option value="${r.full_name}">${r.full_name}${r.private ? ' (privado)' : ''}</option>`).join('')
                 : '<option value="">No hay repositorios visibles</option>';
 
-            reposContainer.innerHTML = githubReposCache.length
-                ? githubReposCache.map(r => `
-                    <div style="background:white; border:1px solid #e5e7eb; border-radius:6px; padding:10px; margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                            <div>
-                                <strong>${r.full_name}</strong>
-                                <div style="font-size:12px; color:#666;">${r.description || 'Sin descripción'}</div>
-                            </div>
-                            <a href="${r.html_url}" target="_blank" rel="noopener" style="color:#244a7c; text-decoration:none; font-size:13px;">Abrir</a>
-                        </div>
-                    </div>
-                `).join('')
-                : '<p style="color:#999;">No se encontraron repositorios. Conecta GitHub o refresca la lista.</p>';
-
+            renderReposList(githubReposCache);
             sincronizarBranchRepo();
         } else {
+            const btnConectar = document.getElementById('btn-conectar-github');
+            if (btnConectar) {
+                btnConectar.textContent = 'Conectar GitHub';
+                btnConectar.href = '/auth/github';
+                btnConectar.style.background = '#244a7c';
+            }
+
             repoSelect.innerHTML = '<option value="">Conecta GitHub para ver repositorios</option>';
             reposContainer.innerHTML = `<p style="color:#244a7c;">${reposData.mensaje || 'No fue posible cargar repositorios.'}</p>`;
         }
 
         if (archivosData.estado === 'exito') {
-            githubArchivosCache = archivosData.archivos || [];
-            if (contadorArchivos) contadorArchivos.textContent = String(githubArchivosCache.length);
-            archivoSelect.innerHTML = githubArchivosCache.length
-                ? githubArchivosCache.map(a => `<option value="${a.nombre}">${a.nombre} (${a.tamano} bytes)</option>`).join('')
-                : '<option value="">No tienes archivos subidos</option>';
-            if (githubArchivosCache.length) {
-                autocompletarPathGithub();
+            const num = (archivosData.archivos || []).length;
+            if (contadorArchivos) contadorArchivos.textContent = num.toString();
+            
+            const archivosSelect = document.getElementById('github-archivo');
+            if (archivosSelect) {
+                archivosSelect.innerHTML = '<option value="">(Ninguno)</option>' + (archivosData.archivos.length
+                    ? archivosData.archivos.map(a => `<option value="${a.nombre}">${a.nombre} (${(a.tamano/1024).toFixed(1)} KB)</option>`).join('')
+                    : '');
             }
-        } else {
-            if (contadorArchivos) contadorArchivos.textContent = '0';
-            archivoSelect.innerHTML = '<option value="">Error cargando archivos</option>';
+        }
+
+        if (migradosData.estado === 'exito') {
+            const archivosMigradosSelect = document.getElementById('github-archivo-migrado');
+            if (archivosMigradosSelect) {
+                archivosMigradosSelect.innerHTML = '<option value="">(Ninguno)</option>' + (migradosData.archivos.length
+                    ? migradosData.archivos.map(a => `<option value="${a.nombre}">${a.nombre} (Última migración)</option>`).join('')
+                    : '');
+            }
         }
 
         if (resultado) resultado.textContent = 'Listo para subir archivos.';
@@ -1390,7 +1466,8 @@ async function crearRepoGithub() {
 
 async function subirArchivoGithub() {
     const repo = document.getElementById('github-repo').value;
-    const archivo = document.getElementById('github-archivo').value;
+    const archivoOrigen = document.getElementById('github-archivo').value;
+    const archivoMigrado = document.getElementById('github-archivo-migrado').value;
     const path = document.getElementById('github-path').value.trim();
     const branch = document.getElementById('github-branch').value.trim();
     const mensaje = document.getElementById('github-mensaje').value.trim();
@@ -1400,36 +1477,52 @@ async function subirArchivoGithub() {
         resultado.textContent = 'Selecciona un repositorio.';
         return;
     }
-    if (!archivo) {
-        resultado.textContent = 'Selecciona un archivo de uploads/.';
+    if (!archivoOrigen && !archivoMigrado) {
+        resultado.textContent = 'Selecciona al menos un archivo para subir (Origen o Migrado).';
         return;
     }
 
-    resultado.textContent = 'Subiendo a GitHub...';
-
+    resultado.textContent = 'Subiendo...';
     try {
-        const resp = await fetch('/api/github/subir', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ repo, archivo, path: path || archivo, branch, mensaje })
-        });
+        const urlList = [];
+        
+        const subir = async (archivo, esMigrado) => {
+            let finalPath = path;
+            if (!finalPath) {
+                finalPath = archivo;
+            } else if (archivoOrigen && archivoMigrado) {
+                if (!finalPath.endsWith('/')) finalPath += '/';
+                finalPath += archivo;
+            } else if (finalPath.endsWith('/')) {
+                finalPath += archivo;
+            }
 
-        const datos = await resp.json();
-        if (datos.estado === 'exito') {
-            const enlace = datos.url || '';
-            resultado.innerHTML = `
-                <div style="padding:10px; background:#edf2f7; border-radius:6px;">
-                    <div style="color:#244a7c; font-weight:bold; margin-bottom:6px;">${datos.mensaje}</div>
-                    ${enlace ? `<a href="${enlace}" target="_blank" rel="noopener" style="word-break:break-all; color:#244a7c;">${enlace}</a>` : ''}
-                    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-                        ${enlace ? `<button onclick="navigator.clipboard.writeText('${enlace}')" style="padding:8px 12px; background:#5f6c7b; color:white; border:none; border-radius:4px; cursor:pointer;">Copiar enlace</button>` : ''}
-                        ${enlace ? `<a href="${enlace}" target="_blank" rel="noopener" style="padding:8px 12px; background:#244a7c; color:white; text-decoration:none; border-radius:4px;">Abrir</a>` : ''}
-                    </div>
-                </div>
-            `;
-        } else {
-            resultado.textContent = datos.mensaje || 'Error subiendo archivo';
-        }
+            const resp = await fetch('/api/github/subir', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    repo, 
+                    archivo, 
+                    path: finalPath, 
+                    branch, 
+                    mensaje,
+                    es_migrado: esMigrado
+                })
+            });
+            const datos = await resp.json();
+            if (datos.estado === 'exito') urlList.push(datos.url);
+            else throw new Error(`Error en ${archivo}: ` + (datos.mensaje || 'Error en subida'));
+        };
+
+        if (archivoOrigen) await subir(archivoOrigen, false);
+        if (archivoMigrado) await subir(archivoMigrado, true);
+
+        resultado.innerHTML = `
+            <div style="padding:10px; background:#edf2f7; border-radius:6px;">
+                <div style="color:#244a7c; font-weight:bold; margin-bottom:6px;">Subida exitosa</div>
+                ${urlList.map(u => `<a href="${u}" target="_blank" rel="noopener" style="display:block; margin-bottom:4px; word-break:break-all; color:#244a7c;">${u}</a>`).join('')}
+            </div>
+        `;
     } catch (error) {
         resultado.textContent = 'Error: ' + error.message;
     }

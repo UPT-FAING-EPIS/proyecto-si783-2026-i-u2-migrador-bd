@@ -18,7 +18,7 @@
 }
 </style>
 
-<!-- Migraciones completadas — el servidor ya las envía ordenadas: más reciente primero -->
+<!-- Migraciones completadas -->
 <h3 id="seccion-migraciones" style="margin-top:10px;">Migraciones realizadas</h3>
 <div id="migraciones-container">
 {% if historial %}
@@ -53,15 +53,24 @@
     </div>
     {% endfor %}
 {% else %}
-    <div id="empty-migraciones" style="text-align:center; padding:30px; background:white; border-radius:8px;">
-        <p style="color:#999; font-size:16px;">No hay migraciones registradas todavía.</p>
-        <a href="/configuracion" style="padding:10px 20px; background:#2196F3; color:white; text-decoration:none; border-radius:4px;">Iniciar una migración</a>
+    <div id="empty-migraciones" style="text-align:center; padding:40px 30px; background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;">
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+        </svg>
+        <p style="color:#888; font-size:16px; margin:0 0 20px 0;">No hay migraciones registradas todavía.</p>
+        <a href="/migracion" style="display:inline-block; padding:12px 24px; background:#244a7c; color:white; text-decoration:none; border-radius:6px; font-weight:bold; font-size:14px;">Iniciar una migración</a>
     </div>
 {% endif %}
 </div>
 
-<!-- Log detallado — el servidor ya los envía ordenados: más reciente primero -->
-<h3 style="margin-top:40px;">Log de actividad del sistema</h3>
+<!-- Log detallado en tiempo real -->
+<h3 style="margin-top:40px;">Logs del sistema</h3>
+<div style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+    <span style="font-size:13px; color:#5f6c7b;">Mostrando actividad de tu sesión en tiempo real</span>
+    <span id="logs-count" style="font-size:12px; color:#aaa; margin-left:auto;">0 registros</span>
+</div>
 <div id="logs-container" style="background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:40px;">
     {% if logs %}
     <table style="width:100%; border-collapse:collapse; font-size:13px;">
@@ -70,7 +79,6 @@
                 <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">#</th>
                 <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Fecha / Hora</th>
                 <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Tipo</th>
-                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">IP</th>
                 <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Mensaje</th>
             </tr>
         </thead>
@@ -89,7 +97,6 @@
                         <span style="color:#4CAF50;">INFO</span>
                     {% endif %}
                 </td>
-                <td style="padding:8px 14px; color:#666;">{{ entrada.ip or '—' }}</td>
                 <td style="padding:8px 14px;">{{ entrada.mensaje }}</td>
             </tr>
             {% endfor %}
@@ -101,10 +108,11 @@
 </div>
 
 <script>
-// ── Polling en tiempo real: cada 5 s consulta /api/historial ──
-// Solo actualiza el DOM si los datos realmente cambiaron (evita parpadeo).
+// ── Real-time updates via SocketIO + lightweight polling ──
+
 let _ultimoHashHistorial = '{{ historial|length }}';
 let _ultimoHashLogs = '{{ logs|length }}';
+let _logsCache = [];  // Mantener logs en memoria para inserciones rápidas
 
 function _hashSimple(arr) {
     if (!arr || arr.length === 0) return '0';
@@ -117,9 +125,14 @@ function _hashSimple(arr) {
 
 function _renderMigraciones(lista) {
     if (!lista || lista.length === 0) {
-        return `<div id="empty-migraciones" style="text-align:center; padding:30px; background:white; border-radius:8px;">
-            <p style="color:#999; font-size:16px;">No hay migraciones registradas todavía.</p>
-            <a href="/configuracion" style="padding:10px 20px; background:#2196F3; color:white; text-decoration:none; border-radius:4px;">Iniciar una migración</a>
+        return `<div id="empty-migraciones" style="text-align:center; padding:40px 30px; background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;">
+                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+            </svg>
+            <p style="color:#888; font-size:16px; margin:0 0 20px 0;">No hay migraciones registradas todavía.</p>
+            <a href="/migracion" style="display:inline-block; padding:12px 24px; background:#244a7c; color:white; text-decoration:none; border-radius:6px; font-weight:bold; font-size:14px;">Iniciar una migración</a>
         </div>`;
     }
     return lista.map((item, idx) => {
@@ -176,7 +189,6 @@ function _renderLogs(lista) {
             <td style="padding:8px 14px; color:#aaa;">${i + 1}</td>
             <td style="padding:8px 14px; white-space:nowrap;">${e.fecha || ''}</td>
             <td style="padding:8px 14px;">${_tipoLabel(e.tipo)}</td>
-            <td style="padding:8px 14px; color:#666;">${e.ip || '—'}</td>
             <td style="padding:8px 14px;">${e.mensaje || ''}</td>
         </tr>`;
     }).join('');
@@ -186,12 +198,16 @@ function _renderLogs(lista) {
                 <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">#</th>
                 <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Fecha / Hora</th>
                 <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Tipo</th>
-                <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">IP</th>
                 <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">Mensaje</th>
             </tr>
         </thead>
         <tbody>${filas}</tbody>
     </table>`;
+}
+
+function _updateLogsCount(n) {
+    const el = document.getElementById('logs-count');
+    if (el) el.textContent = n + ' registros';
 }
 
 async function actualizarHistorial() {
@@ -209,11 +225,14 @@ async function actualizarHistorial() {
         }
 
         // Solo reescribir logs si cambiaron
-        const hashL = _hashSimple(datos.logs);
+        const logsOrdenados = (datos.logs || []).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+        const hashL = _hashSimple(logsOrdenados);
         if (hashL !== _ultimoHashLogs) {
             _ultimoHashLogs = hashL;
+            _logsCache = logsOrdenados;
             document.getElementById('logs-container').innerHTML =
-                _renderLogs(datos.logs);
+                _renderLogs(logsOrdenados);
+            _updateLogsCount(logsOrdenados.length);
         }
 
         // Mostrar hora de última actualización
@@ -222,14 +241,30 @@ async function actualizarHistorial() {
         document.getElementById('rt-dot').style.background = '#4CAF50';
 
     } catch (e) {
-        // Error de red: poner punto rojo
         const dot = document.getElementById('rt-dot');
         if (dot) dot.style.background = '#f44336';
     }
 }
 
-// Primera actualización al cargar + polling cada 5 s
+// ── SocketIO: recibir logs en tiempo real sin esperar el polling ──
+if (typeof io !== 'undefined') {
+    const socket = io();
+    socket.on('log', function(data) {
+        if (!data || !data.mensaje) return;
+        // Insertar al inicio (más reciente primero)
+        const nuevoLog = {
+            fecha: new Date().toLocaleString('sv-SE'),
+            tipo: data.tipo || 'info',
+            mensaje: data.mensaje
+        };
+        _logsCache.unshift(nuevoLog);
+        document.getElementById('logs-container').innerHTML = _renderLogs(_logsCache);
+        _updateLogsCount(_logsCache.length);
+    });
+}
+
+// Primera actualización inmediata + polling cada 3 s (más rápido)
 actualizarHistorial();
-setInterval(actualizarHistorial, 5000);
+setInterval(actualizarHistorial, 3000);
 </script>
 {% endblock %}
