@@ -280,7 +280,6 @@
 
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
             <a href="/auth/github" id="btn-conectar-github" style="padding:10px 16px; background:#244a7c; color:white; text-decoration:none; border-radius:4px; font-weight:bold;">Conectar GitHub</a>
-            <button onclick="cargarGitHubData()" style="padding:10px 16px; background:#5f6c7b; color:white; border:none; border-radius:4px; cursor:pointer;">Actualizar repositorios</button>
         </div>
         
         <div style="background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px; padding:16px; margin-bottom:16px;">
@@ -318,7 +317,7 @@
                     <input type="text" id="github-repo-search" oninput="filtrarRepos()" placeholder="Buscar repositorio..." style="width:100%; padding:8px 12px 8px 34px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
                 </div>
                 <div id="github-repos-container" style="max-height:320px; overflow-y:auto; overflow-x:hidden;">
-                    <p style="color:#999;">Pulsa "Actualizar repositorios" para cargar tu lista.</p>
+                    <p style="color:#999;">Cargando repositorios...</p>
                 </div>
             </div>
 
@@ -1359,13 +1358,15 @@ async function cargarGitHubData() {
     if (resultado) resultado.textContent = 'Cargando datos de GitHub...';
 
     try {
-        const [reposResp, archivosResp] = await Promise.all([
+        const [reposResp, archivosResp, migradosResp] = await Promise.all([
             fetch('/api/github/repos'),
-            fetch('/api/github/archivos-locales')
+            fetch('/api/github/archivos-locales'),
+            fetch('/api/github/archivos-migrados')
         ]);
 
         const reposData = await reposResp.json();
         const archivosData = await archivosResp.json();
+        const migradosData = await migradosResp.json();
 
         if (reposData.estado === 'exito') {
             const btnConectar = document.getElementById('btn-conectar-github');
