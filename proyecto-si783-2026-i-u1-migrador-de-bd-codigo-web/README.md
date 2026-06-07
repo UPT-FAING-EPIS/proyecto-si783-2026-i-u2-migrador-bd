@@ -1,52 +1,54 @@
-# 🔄 MigradorBD
+# Migrador DB Enterprise
 
-Sistema integral de migración de bases de datos que permite la extracción, transformación y carga (ETL) entre múltiples motores, incluyendo autenticación segura, control de roles y conexión con GitHub.
+Acceso a la plataforma oficial: [https://migradordb.online/](https://migradordb.online/)
 
----
-
-## 📁 Estructura del Proyecto Organizada
-
-El proyecto ha sido restructurado para mantener el directorio raíz ordenado. Los archivos están agrupados de la siguiente forma:
-
-* **[app/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/app)**: Código fuente de la aplicación Flask (rutas, plantillas HTML, recursos estáticos, lógica de autenticación y WebSocket).
-* **[despliegue/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/despliegue)**: Contiene los scripts de automatización e instalación de servidores, configuraciones de Nginx, Supervisor y Systemd para la puesta en producción en el VPS.
-* **[docs/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/docs)**: Guías y manuales de configuración detallados.
-* **[tests/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/tests)**: Archivos de prueba y scripts de testeo para la detección de motores y bases de datos.
-* **Módulos del Motor ETL**:
-  * **[extraccion/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/extraccion)**: Conectores y extractores de origen.
-  * **[transformacion/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/transformacion)**: Mapeadores y traductores de datos.
-  * **[carga/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/carga)**: Cargadores y constructores de destino.
-  * **[utilidades/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/utilidades)**: Herramientas del sistema y detector automático de motores.
+Sistema integral de migración de bases de datos de nivel corporativo. Permite la extracción, transformación y carga (ETL) de estructuras complejas (tablas, vistas, triggers y procedimientos almacenados) entre múltiples motores de bases de datos mediante un algoritmo eficiente de procesamiento por bloques (Chunking RAM).
 
 ---
 
-## 📚 Índice de Documentación (`docs/`)
+## Estructura del Proyecto
 
-Para configurar o desplegar la aplicación, consulta las siguientes guías específicas dentro de la carpeta `docs/`:
+El código fuente está estructurado en módulos para garantizar la escalabilidad técnica:
 
-* **Autenticación y OAuth:**
-  * [Configuración de Google y GitHub OAuth](docs/OAUTH_SETUP.md) ➜ Guía para obtener Client IDs/Secrets y configurar redirecciones.
-  * [Sistema de Autenticación Completo](docs/README_AUTH.md) ➜ Detalle técnico sobre sesiones, contraseñas y base de datos de usuarios.
-  * [Documentación de Flujos de Autenticación](docs/AUTENTICACION.md) ➜ Esquemas de flujo de usuario y roles.
+* **[app/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/app)**: Lógica principal de la aplicación web (Rutas Flask, plantillas, autenticación, foro de comunidad y sockets).
+* **[despliegue/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/despliegue)**: Automatización de infraestructura (Nginx, Supervisor, Systemd).
+* **[docs/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/docs)**: Documentación técnica y arquitectura de la plataforma.
+* **[tests/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/tests)**: Pruebas unitarias de conexión e integración de bases de datos.
 
-* **Guías de Despliegue en Producción (VPS/Ubuntu):**
-  * [Guía de Despliegue Completo en Ubuntu](docs/DEPLOY_UBUNTU.md) ➜ Pasos paso a paso detallados para configurar Nginx, SSL y servicios.
-  * [Resumen Visual y Referencia de Despliegue](docs/DEPLOYMENT_SUMMARY.md) ➜ Lista de puertos, comandos rápidos y checklist.
-  * [Despliegue Directo Sin Dominio (Solo con IP)](docs/SIN_DOMINIO.md) ➜ Cómo levantar la app si no tienes un dominio adquirido.
-  * [Manual de Despliegue con IP VPS](docs/DEPLOY_CON_IP.md) ➜ Referencia rápida de comandos para IPs estáticas.
-  * [Guía de Inicio Rápido](docs/QUICK_START.md) ➜ Primeros pasos para levantar el entorno localmente o en VPS.
-  * [Referencia de Arranque de Producción](docs/README_DESPLIEGUE.md) ➜ Comandos rápidos para inicializar.
+### Módulos del Motor ETL
+
+* **[extraccion/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/extraccion)**: Conectores y extractores de origen.
+* **[transformacion/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/transformacion)**: Analizadores sintácticos y conversores de tipos.
+* **[carga/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/carga)**: Inserción optimizada en motores de destino.
+* **[utilidades/](file:///c:/proyecto-si783-2026-i-u2-migrador-bd/proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/utilidades)**: Detección automática de dialectos y funciones de soporte.
 
 ---
 
-## 🛠️ Desarrollo Local
+## Documentación Técnica
 
-1. Instala las dependencias:
+Consulte el directorio `docs/` para guías detalladas de implementación:
+
+* **Seguridad y Autenticación**
+  * Configuración de proveedores OAuth (Google/GitHub).
+  * Documentación de flujos de autenticación y control de roles de usuario.
+
+* **Despliegue en Producción**
+  * Guía de despliegue completo en servidores Ubuntu (Linux).
+  * Resumen de puertos, configuración SSL y monitorización de procesos.
+
+---
+
+## Entorno de Desarrollo Local
+
+1. Instalación de dependencias:
    ```bash
    pip install -r requirements.txt
    ```
-2. Configura tu archivo `.env` tomando como base el archivo `.env.example`.
-3. Inicia el servidor de desarrollo:
+
+2. Configuración de variables de entorno:
+   Copie `.env.example` a `.env` y ajuste los parámetros requeridos.
+
+3. Ejecución del servidor web:
    ```bash
    python run.py
    ```
