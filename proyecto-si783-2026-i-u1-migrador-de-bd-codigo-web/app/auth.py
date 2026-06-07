@@ -112,6 +112,20 @@ def inicializar_bd():
                     run_query('ALTER TABLE usuarios ADD COLUMN descripcion VARCHAR(500)', commit=True)
                 except Exception:
                     pass
+                try:
+                    run_query('''
+                        CREATE TABLE IF NOT EXISTS comunidad_posts (
+                            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                            usuario_id INT NOT NULL,
+                            titulo VARCHAR(255) NOT NULL,
+                            contenido TEXT NOT NULL,
+                            tipo VARCHAR(50) NOT NULL,
+                            creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    ''', commit=True)
+                except Exception as e:
+                    print(f"Error creando comunidad_posts: {e}")
         except Exception:
             # No existe la tabla: intentar crear usando DDL compatible con MySQL
             try:
