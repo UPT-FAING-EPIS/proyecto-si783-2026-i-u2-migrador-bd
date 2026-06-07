@@ -210,6 +210,8 @@ def inicializar_bd():
                 FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
                 UNIQUE(proveedor, proveedor_id)
             )
+        ''')
+        
         # Crear tabla comunidad_posts si no existe
         c.execute('''
             CREATE TABLE IF NOT EXISTS comunidad_posts (
