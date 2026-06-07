@@ -4,19 +4,19 @@
 
 {% block contenido %}
 <style>
-    /* Estilos Premium para la Landing Page */
+    /* Estilos Premium para la Landing Page - VERSIÓN CLARA */
     .landing-container {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         min-height: 85vh;
-        background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
-        color: white;
+        background: radial-gradient(circle at top, #ffffff 0%, #f1f5f9 100%);
+        color: #0f172a;
         text-align: center;
         padding: 40px 20px;
         border-radius: 24px;
-        box-shadow: inset 0 0 100px rgba(0,0,0,0.5);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.05);
         overflow: hidden;
         position: relative;
     }
@@ -26,7 +26,7 @@
         content: '';
         position: absolute;
         top: -50%; left: -50%; width: 200%; height: 200%;
-        background: radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.05) 0%, transparent 50%);
         animation: rotarBg 20s linear infinite;
         z-index: 0;
     }
@@ -36,42 +36,42 @@
         position: relative;
         z-index: 1;
         max-width: 900px;
+        width: 100%;
     }
 
     .hero-title {
-        font-size: 56px;
+        font-size: 64px;
         font-weight: 900;
         margin-bottom: 20px;
-        background: linear-gradient(to right, #38bdf8, #818cf8, #c084fc);
+        background: linear-gradient(to right, #0284c7, #4338ca, #7e22ce);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         line-height: 1.1;
-        letter-spacing: -1px;
+        letter-spacing: -2px;
     }
 
     .hero-subtitle {
         font-size: 20px;
-        color: #94a3b8;
+        color: #475569;
         margin-bottom: 40px;
-        font-weight: 300;
+        font-weight: 400;
     }
 
-    /* Mockup Terminal MacOS */
+    /* Mockup Terminal MacOS (Mantiene modo oscuro para contraste) */
     .mac-terminal {
-        background: rgba(15, 23, 42, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(0, 0, 0, 0.1);
         border-radius: 12px;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         width: 100%;
         max-width: 650px;
         margin: 0 auto 40px auto;
         overflow: hidden;
-        backdrop-filter: blur(10px);
         text-align: left;
     }
 
     .mac-header {
-        background: rgba(30, 41, 59, 0.8);
+        background: rgba(30, 41, 59, 1);
         padding: 12px 16px;
         display: flex;
         align-items: center;
@@ -129,9 +129,9 @@
 
     .db-icon {
         font-size: 45px;
-        color: #cbd5e1;
+        color: #64748b;
         transition: all 0.3s ease;
-        filter: grayscale(100%) opacity(0.6);
+        filter: grayscale(100%) opacity(0.5);
     }
     .db-icon:hover {
         filter: grayscale(0%) opacity(1);
@@ -142,27 +142,112 @@
     .cta-button {
         display: inline-block;
         padding: 16px 40px;
-        background: linear-gradient(135deg, #38bdf8, #6366f1);
+        background: linear-gradient(135deg, #0284c7, #4f46e5);
         color: white;
         text-decoration: none;
         font-size: 18px;
         font-weight: bold;
         border-radius: 50px;
-        box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
         transition: all 0.3s ease;
         position: relative;
         z-index: 2;
+        margin-bottom: 60px;
     }
     .cta-button:hover {
         transform: translateY(-3px);
-        box-shadow: 0 15px 35px rgba(99, 102, 241, 0.6);
+        box-shadow: 0 15px 35px rgba(79, 70, 229, 0.5);
     }
+
+    /* Sección Extra Visual */
+    .feature-showcase {
+        display: flex;
+        justify-content: center;
+        align-items: stretch;
+        gap: 40px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .feature-card {
+        background: white;
+        padding: 30px;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        flex: 1;
+        min-width: 250px;
+        max-width: 300px;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+        transition: transform 0.3s;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        border-color: #38bdf8;
+    }
+
+    .feature-icon-container {
+        width: 60px;
+        height: 60px;
+        background: #f0f9ff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px auto;
+        font-size: 28px;
+        color: #0ea5e9;
+    }
+
+    .workflow-diagram {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin: 40px auto;
+        padding: 20px;
+        background: white;
+        border-radius: 100px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+        width: fit-content;
+    }
+
+    .pulse-line {
+        height: 4px;
+        width: 100px;
+        background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
+        border-radius: 2px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .pulse-line::after {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 50%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.8), transparent);
+        animation: pulseMove 1.5s infinite;
+    }
+    @keyframes pulseMove { to { left: 200%; } }
 </style>
 
 <div class="landing-container">
     <div class="hero-content">
-        <h1 class="hero-title">Migración de Bases de Datos,<br>ahora a la velocidad de la luz.</h1>
+        <h1 class="hero-title">MigradorBD Enterprise</h1>
         <p class="hero-subtitle">Transfiere Tablas, Vistas, Triggers y Procedimientos Almacenados en segundos. Sin pérdida de datos, sin complicaciones.</p>
+
+        <!-- Diagrama Visual de Flujo de Datos -->
+        <div class="workflow-diagram">
+            <i class="devicon-mysql-plain" style="font-size: 40px; color: #0284c7;"></i>
+            <div class="pulse-line"></div>
+            <div style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">MBD Engine</div>
+            <div class="pulse-line"></div>
+            <i class="devicon-postgresql-plain" style="font-size: 40px; color: #336791;"></i>
+        </div>
 
         <!-- Mockup Terminal -->
         <div class="mac-terminal">
@@ -182,8 +267,29 @@
             </div>
         </div>
 
-        <!-- Logos de BD con Devicon -->
-        <div class="db-logos">
+        <a href="/migracion" class="cta-button">Comenzar Migración Gratis</a>
+
+        <!-- Showcase Extras Visuales Abajo -->
+        <div class="feature-showcase">
+            <div class="feature-card">
+                <div class="feature-icon-container">📊</div>
+                <h3 style="margin-top: 0; color: #1e293b;">Reportes Excel</h3>
+                <p style="color: #64748b; font-size: 14px; margin-bottom: 0;">Auditoría completa al instante. Descarga un log detallado de todas tus tablas extraídas y cargadas.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-container">⚡</div>
+                <h3 style="margin-top: 0; color: #1e293b;">Chunking RAM</h3>
+                <p style="color: #64748b; font-size: 14px; margin-bottom: 0;">Algoritmo optimizado. Migra terabytes de datos usando una cantidad de memoria casi nula en tu servidor.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-container">🌐</div>
+                <h3 style="margin-top: 0; color: #1e293b;">Comunidad DBA</h3>
+                <p style="color: #64748b; font-size: 14px; margin-bottom: 0;">Comparte tips de mapeo y resuelve problemas de compatibilidad con expertos reales en bases de datos.</p>
+            </div>
+        </div>
+        
+        <!-- Logos de BD con Devicon más pequeños abajo -->
+        <div class="db-logos" style="margin-top: 60px;">
             <i class="devicon-mysql-plain db-icon" title="MySQL"></i>
             <i class="devicon-postgresql-plain db-icon" title="PostgreSQL"></i>
             <i class="devicon-oracle-original db-icon" title="Oracle"></i>
@@ -194,7 +300,6 @@
             <i class="devicon-amazonwebservices-plain-wordmark db-icon" title="AWS Redshift"></i>
         </div>
 
-        <a href="/migracion" class="cta-button">Comenzar Migración Gratis</a>
     </div>
 </div>
 
