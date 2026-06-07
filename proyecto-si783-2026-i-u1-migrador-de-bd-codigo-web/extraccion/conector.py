@@ -517,34 +517,52 @@ class ConectorOrigen:
             if sql_idx:
                 self.indices.append({'nombre': nombre_idx, 'sql': sql_idx})
     
-    def extraer_datos(self, tabla: str) -> pd.DataFrame:
-        """Extrae datos de una tabla especifica"""
-        # Normalizar tabla: soportar tabla calificada 'esquema.tabla' o solo 'tabla'
+    def extraer_datos_chunked(self, tabla: str, chunksize: int = 10000):
+        """Generador que extrae datos de una tabla en bloques (chunks) para ahorrar memoria RAM."""
         if self.tipo == 'SQLite':
-            # Para SQLite, el nombre real de la tabla es la parte después del punto
+            nombre_real = tabla.split('.')[-1]
+            try:
+                for chunk in pd.read_sql(f'SELECT * FROM "{nombre_real}"', self.engine, chunksize=chunksize):
+                    yield chunk
+            except Exception as e:
+                # Si falla, retornar vacio
+                yield pd.DataFrame()
+        elif self.tipo == 'CSV':
+            try:
+                for chunk in pd.read_csv(self.ruta, chunksize=chunksize):
+                    yield chunk
+            except Exception:
+                for chunk in pd.read_csv(self.ruta, on_bad_lines='skip', engine='python', chunksize=chunksize):
+                    yield chunk
+        else:
+            # Para el resto (SQL Generico, Excel, MongoDB) devolvemos todo en 1 solo chunk
+            df = self.extraer_datos(tabla)
+            if not df.empty:
+                yield df
+            else:
+                yield pd.DataFrame()
+
+    def extraer_datos(self, tabla: str) -> pd.DataFrame:
+        """Extrae datos de una tabla especifica (legacy full load)"""
+        if self.tipo == 'SQLite':
             nombre_real = tabla.split('.')[-1]
             return pd.read_sql(f'SELECT * FROM "{nombre_real}"', self.engine)
         elif self.tipo in ['PostgreSQL', 'MySQL', 'Microsoft SQL Server', 'Oracle', 'SQL Generico']:
-            # Intentar clave exacta
             info = self._sql_inserts.get(tabla)
-            # Si no existe, intentar buscar por sufijo '.tabla'
             if not info:
                 if '.' not in tabla:
-                    # buscar primera clave que termine con .{tabla}
                     for k in self._sql_inserts.keys():
                         if k.endswith(f'.{tabla}'):
                             info = self._sql_inserts.get(k)
                             tabla = k
                             break
                 else:
-                    # si tabla es calificada, probar directamente
                     info = self._sql_inserts.get(tabla)
 
             if info and info.get('filas'):
                 columnas = info.get('columnas') or [c['nombre'] for c in self.esquema.get(tabla, {}).get('columnas', [])]
                 return pd.DataFrame(info['filas'], columns=columnas)
 
-            # No hay filas, devolver DataFrame vacío con columnas detectadas si existen
             esquema_info = self.esquema.get(tabla) or {}
             columnas = [c['nombre'] for c in esquema_info.get('columnas', [])] if esquema_info else []
             return pd.DataFrame(columns=columnas)
@@ -552,7 +570,6 @@ class ConectorOrigen:
             try:
                 return pd.read_csv(self.ruta)
             except Exception:
-                # Fallback tolerante para CSV con filas mal formadas
                 return pd.read_csv(self.ruta, on_bad_lines='skip', engine='python')
         elif self.tipo == 'Excel':
             return pd.read_excel(self.ruta, sheet_name=tabla)

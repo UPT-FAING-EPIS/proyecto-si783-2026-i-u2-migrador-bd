@@ -832,6 +832,14 @@ def api_subir_archivo():
         _registrar_log(f'Error al cargar "{nombre}": {str(e)}', 'error', ip)
         return jsonify({'estado': 'error', 'mensaje': f'Error procesando archivo: {str(e)}'})
 
+@principal.route('/api/excluir-tablas', methods=['POST'])
+@requerir_login
+def api_excluir_tablas():
+    """Recibe la lista de tablas que el usuario desmarcó para no migrar."""
+    datos = request.json or {}
+    excluidas = datos.get('excluidas', [])
+    estado_app['excluidas'] = excluidas
+    return jsonify({'estado': 'exito'})
 
 @principal.route('/api/validar-tipo-bd', methods=['POST'])
 @requerir_login
@@ -1016,12 +1024,16 @@ def api_iniciar_migracion():
     if estado_app['proceso_activo']:
         return jsonify({'estado': 'error', 'mensaje': 'Ya hay una migracion en curso'})
     
+    datos = request.json or {}
+    simulacion = datos.get('simulacion', False)
+    
     ip = request.remote_addr or 'desconocida'
     estado_app['proceso_activo'] = True
+    estado_app['simulacion'] = simulacion
     estado_app['metricas'] = {'extraidos': 0, 'cargados': 0, 'errores': 0, 'tablas_ok': 0}
     estado_app['_ip_migracion'] = ip  # Guardar IP para el background task
     
-    _registrar_log('Iniciando migracion...', 'info', ip)
+    _registrar_log(f'Iniciando {"simulación de " if simulacion else ""}migracion...', 'info', ip)
     
     socketio.start_background_task(ejecutar_migracion)
     return jsonify({'estado': 'exito'})
@@ -1029,13 +1041,20 @@ def api_iniciar_migracion():
 def ejecutar_migracion():
     origen = estado_app.get('origen')
     destino = estado_app.get('destino')
-    tablas = origen.tablas if origen else []
+    simulacion = estado_app.get('simulacion', False)
+    excluidas = estado_app.get('excluidas', [])
+    
+    todas_las_tablas = origen.tablas if origen else []
+    tablas = [t for t in todas_las_tablas if t not in excluidas]
     total = len(tablas)
     
     # Guardar timestamp de inicio para calcular duración
     estado_app['_fecha_inicio_migracion'] = datetime.now()
 
-    _registrar_log(f'Migrando {total} tablas...')
+    if simulacion:
+        _registrar_log('== MODO SIMULACIÓN ACTIVO == (No se escribirán datos reales)', 'info')
+
+    _registrar_log(f'Migrando {total} tablas (Excluidas: {len(excluidas)})...')
 
     if total == 0:
         try:
@@ -1061,21 +1080,31 @@ def ejecutar_migracion():
 
             try:
                 _registrar_log(f'Extrayendo: {tabla}...')
-                df = origen.extraer_datos(tabla)
-                estado_app['metricas']['extraidos'] += len(df)
+                
+                # Iterar sobre chunks (bloques)
+                filas_totales_tabla = 0
+                for chunk_df in origen.extraer_datos_chunked(tabla, chunksize=10000):
+                    filas_chunk = len(chunk_df)
+                    estado_app['metricas']['extraidos'] += filas_chunk
+                    filas_totales_tabla += filas_chunk
 
-                if not df.empty:
-                    _registrar_log(f'Cargando: {tabla} ({len(df)} registros)...')
-                    df = MapeadorDatos.limpiar_dataframe(df)
-                    cargados = destino.cargar_tabla(tabla, df)
-                    estado_app['metricas']['cargados'] += cargados
+                    if not chunk_df.empty:
+                        chunk_df = MapeadorDatos.limpiar_dataframe(chunk_df)
+                        
+                        if not simulacion:
+                            cargados = destino.cargar_tabla(tabla, chunk_df)
+                        else:
+                            cargados = filas_chunk
+                            
+                        estado_app['metricas']['cargados'] += cargados
 
+                _registrar_log(f'Tabla {tabla} completada ({filas_totales_tabla} registros).')
                 estado_app['metricas']['tablas_ok'] += 1
 
                 socketio.emit('progreso', {
                     'porcentaje': progreso,
                     'tabla': tabla,
-                    'estado': f'{tabla}: {len(df)} registros migrados',
+                    'estado': f'{tabla}: {filas_totales_tabla} registros migrados' + (' (Simulado)' if simulacion else ''),
                     'metricas': estado_app['metricas']
                 }, skip_sid=None)
 
@@ -1286,6 +1315,63 @@ def api_descargar_sql():
             return jsonify({'estado': 'error', 'mensaje': f'Error: {str(e)}'})
     
     return jsonify({'estado': 'error', 'mensaje': 'No hay migración completada. Ejecute una migracion primero.'})
+
+@principal.route('/api/descargar-reporte')
+@requerir_login
+def api_descargar_reporte():
+    """Genera un reporte de auditoría en Excel."""
+    _registrar_actividad_ip('Descargar reporte auditoria')
+    metricas = estado_app.get('metricas', {})
+    if not metricas:
+        return jsonify({'estado': 'error', 'mensaje': 'No hay datos de migracion recientes'})
+        
+    import pandas as pd
+    from io import BytesIO
+    from datetime import datetime
+    
+    origen = estado_app.get('origen')
+    destino = estado_app.get('destino')
+    inicio = estado_app.get('_fecha_inicio_migracion', datetime.now())
+    fin = datetime.now()
+    duracion = str(fin - inicio).split('.')[0]
+    simulacion = estado_app.get('simulacion', False)
+    
+    resumen = {
+        'Métrica': [
+            'Fecha del Reporte', 'Modo', 'Motor Origen', 'Motor Destino', 
+            'Duración', 'Total Tablas', 'Filas Extraidas', 
+            'Filas Cargadas', 'Errores Detectados'
+        ],
+        'Valor': [
+            fin.strftime("%Y-%m-%d %H:%M:%S"),
+            'Simulación (Dry Run)' if simulacion else 'Migración Real',
+            getattr(origen, 'tipo', 'Desconocido') if origen else '-',
+            getattr(destino, 'motor', 'Desconocido') if destino else '-',
+            duracion,
+            metricas.get('tablas_ok', 0),
+            metricas.get('extraidos', 0),
+            metricas.get('cargados', 0),
+            metricas.get('errores', 0)
+        ]
+    }
+    
+    df_resumen = pd.DataFrame(resumen)
+    
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df_resumen.to_excel(writer, sheet_name='Resumen', index=False)
+        worksheet = writer.sheets['Resumen']
+        worksheet.column_dimensions['A'].width = 25
+        worksheet.column_dimensions['B'].width = 30
+        
+    output.seek(0)
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f"Reporte_Migracion_{fin.strftime('%Y%m%d_%H%M%S')}.xlsx",
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 @principal.route('/api/pausar', methods=['POST'])
 @requerir_login

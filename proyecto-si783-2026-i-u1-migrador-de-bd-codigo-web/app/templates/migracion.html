@@ -234,8 +234,11 @@
         <p id="porcentaje" style="font-size:28px; text-align:center; color:#1a73e8;">0%</p>
         
         <div style="margin:15px 0; display:flex; flex-wrap:wrap; gap:10px;">
-            <button onclick="iniciarMigracion()" id="btn-iniciar" style="padding:12px 30px; background:#244a7c; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; flex:1; min-width:140px;">
+            <button onclick="iniciarMigracion(false)" id="btn-iniciar" style="padding:12px 30px; background:#244a7c; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; flex:1; min-width:140px;">
                 Iniciar Migracion
+            </button>
+            <button onclick="iniciarMigracion(true)" id="btn-simular" style="padding:12px 30px; background:#10b981; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; flex:1; min-width:140px;">
+                Simular Migración
             </button>
             <button onclick="pausarMigracion()" id="btn-pausar" style="padding:12px 30px; background:#5f6c7b; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; flex:1; min-width:140px;">
                 Pausar
@@ -244,7 +247,10 @@
                 Crear Tablas
             </button>
             <button onclick="descargar()" id="btn-descargar" style="padding:12px 30px; background:#244a7c; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; flex:1; min-width:140px;">
-                Descargar
+                Descargar BD
+            </button>
+            <button onclick="descargarReporte()" id="btn-reporte" style="padding:12px 30px; background:#f59e0b; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; flex:1; min-width:140px;" disabled>
+                📄 Reporte Excel
             </button>
         </div>
         
@@ -688,10 +694,30 @@ function _renderizarOrigen(datos) {
     const tipo = datos && datos.tipo_detectado ? datos.tipo_detectado : 'Desconocido';
     const mensaje = datos && datos.mensaje_deteccion ? datos.mensaje_deteccion : '';
     const tablas = datos && typeof datos.total_tablas !== 'undefined' ? datos.total_tablas : 0;
+    const listaTablas = datos && datos.tablas ? datos.tablas : [];
 
     const detalleMotor = mensaje || (tipo === 'SQL Generico'
         ? 'Detectado como script SQL genérico. Si sabes que proviene de un motor concreto, revisa el archivo para afinar la detección.'
         : 'Tipo detectado a partir del contenido del archivo.');
+
+    let htmlTablas = '';
+    if (listaTablas.length > 0) {
+        htmlTablas = `
+            <div style="margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px;">
+                <p style="font-weight: bold; margin-bottom: 5px;">Migración Selectiva: <span style="font-size:12px; font-weight:normal; color:#666;">(Desmarca lo que no desees migrar)</span></p>
+                <div style="max-height: 150px; overflow-y: auto; background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 4px; padding: 10px; font-size: 13px;">
+                    ${listaTablas.map(t => `
+                        <div style="margin-bottom: 4px;">
+                            <label style="cursor: pointer; display: flex; align-items: center;">
+                                <input type="checkbox" class="chk-tabla-origen" value="${t}" checked style="margin-right: 6px;" onchange="actualizarTablasSeleccionadas()">
+                                ${t}
+                            </label>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
 
     return `
         <div class="origen-resumen">
@@ -702,8 +728,27 @@ function _renderizarOrigen(datos) {
             <button onclick="abrirModalValidarTipo('${tipo}')" style="margin-top:10px; padding:8px 12px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px;">
                 ✓ Validar o cambiar tipo
             </button>
+            ${htmlTablas}
         </div>
     `;
+}
+
+async function actualizarTablasSeleccionadas() {
+    const checkboxes = document.querySelectorAll('.chk-tabla-origen');
+    const excluidas = [];
+    checkboxes.forEach(chk => {
+        if (!chk.checked) excluidas.push(chk.value);
+    });
+
+    try {
+        await fetch('/api/excluir-tablas', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ excluidas })
+        });
+    } catch(e) {
+        console.error("Error al actualizar tablas excluidas", e);
+    }
 }
 
 function marcarMotorSeleccionado(motor) {
@@ -868,6 +913,15 @@ socket.on('migracion_completada', (m) => {
         btn.disabled = false;
         btn.textContent = 'Iniciar Migracion';
     }
+    const btnSimular = document.getElementById('btn-simular');
+    if (btnSimular) {
+        btnSimular.disabled = false;
+        btnSimular.textContent = 'Simular Migración';
+    }
+    const btnReporte = document.getElementById('btn-reporte');
+    if (btnReporte) {
+        btnReporte.disabled = false;
+    }
     actualizarMetricas(m);
     const logs = document.getElementById('logs');
     if (logs) {
@@ -898,8 +952,25 @@ socket.on('limpiar_interfaz', () => {
     document.getElementById('btn-pausar').disabled = true;
     document.getElementById('btn-crear').disabled = true;
     document.getElementById('btn-descargar').disabled = !motorDestinoSeleccionado;
+    
+    const btnReporte = document.getElementById('btn-reporte');
+    if (btnReporte) btnReporte.disabled = true;
     actualizarDetectorVisual(null);
 });
+
+async function descargarReporte() {
+    try {
+        const resp = await fetch('/api/descargar-reporte');
+        if (resp.headers.get('content-type')?.includes('application/json')) {
+            const j = await resp.json();
+            alert(j.mensaje || 'Error descargando reporte');
+            return;
+        }
+        await _downloadBlobResponse(resp, 'reporte_migracion.xlsx');
+    } catch(e) {
+        alert('Error descargando reporte: ' + e.message);
+    }
+}
 
 socket.on('disconnect', () => {
     migracionActiva = false;
@@ -1015,17 +1086,22 @@ function actualizarBotonDescargar(motor) {
     }
 }
 
-async function iniciarMigracion() {
-    const btn = document.getElementById('btn-iniciar');
+async function iniciarMigracion(simular = false) {
+    const btn = document.getElementById(simular ? 'btn-simular' : 'btn-iniciar');
     const logs = document.getElementById('logs');
     if (migracionActiva) return;
     migracionActiva = true;
-    btn.disabled = true;
-    btn.textContent = 'Migrando...';
+    
+    // Disable both buttons
+    document.getElementById('btn-iniciar').disabled = true;
+    const btnSimular = document.getElementById('btn-simular');
+    if(btnSimular) btnSimular.disabled = true;
+    
+    btn.textContent = simular ? 'Simulando...' : 'Migrando...';
 
     if (logs) {
         const item = document.createElement('div');
-        item.textContent = '[sistema] Iniciando migración...';
+        item.textContent = simular ? '[sistema] Iniciando simulación...' : '[sistema] Iniciando migración...';
         logs.appendChild(item);
         logs.scrollTop = logs.scrollHeight;
     }
@@ -1033,22 +1109,27 @@ async function iniciarMigracion() {
     try {
         const resp = await fetch('/api/iniciar-migracion', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'}
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ simulacion: simular })
         });
         const datos = await resp.json();
         if (datos.estado !== 'exito') {
             alert(datos.mensaje);
             migracionActiva = false;
-            btn.disabled = false;
-            btn.textContent = 'Iniciar Migracion';
+            document.getElementById('btn-iniciar').disabled = false;
+            if(btnSimular) btnSimular.disabled = false;
+            document.getElementById('btn-iniciar').textContent = 'Iniciar Migracion';
+            if(btnSimular) btnSimular.textContent = 'Simular Migración';
         } else {
             iniciarSeguimientoEstado();
         }
     } catch(e) {
         alert('Error: ' + e.message);
         migracionActiva = false;
-        btn.disabled = false;
-        btn.textContent = 'Iniciar Migracion';
+        document.getElementById('btn-iniciar').disabled = false;
+        if(btnSimular) btnSimular.disabled = false;
+        document.getElementById('btn-iniciar').textContent = 'Iniciar Migracion';
+        if(btnSimular) btnSimular.textContent = 'Simular Migración';
     }
 }
 
