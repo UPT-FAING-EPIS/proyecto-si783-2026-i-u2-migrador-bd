@@ -1676,3 +1676,72 @@ def api_cli_execute():
 @socketio.on('conectar')
 def conectar():
     socketio.emit('log', {'mensaje': 'Sistema listo. Suba un archivo para comenzar.'})
+
+# =====================================================================
+# COMUNIDAD
+# =====================================================================
+
+@principal.route('/comunidad')
+@requerir_login
+def comunidad():
+    """Renderiza la vista principal de la comunidad."""
+    _registrar_actividad_ip('Vista Comunidad')
+    return render_template('comunidad.html')
+
+@principal.route('/api/comunidad/posts', methods=['GET'])
+@requerir_login
+def api_obtener_posts():
+    """Obtiene los posts de la comunidad con datos del autor."""
+    try:
+        from app.auth import run_query
+        # Traer posts ordenados por fecha descendente
+        query = '''
+            SELECT p.id, p.titulo, p.contenido, p.tipo, p.creado_en, 
+                   u.usuario, u.foto_perfil 
+            FROM comunidad_posts p
+            JOIN usuarios u ON p.usuario_id = u.id
+            ORDER BY p.creado_en DESC
+            LIMIT 50
+        '''
+        res = run_query(query, fetchall=True)
+        posts = []
+        if res:
+            for row in res:
+                posts.append({
+                    'id': row[0],
+                    'titulo': row[1],
+                    'contenido': row[2],
+                    'tipo': row[3],
+                    'creado_en': row[4],
+                    'autor': row[5],
+                    'foto_perfil': row[6] or 'https://ui-avatars.com/api/?name=' + row[5] + '&background=random'
+                })
+        return jsonify({'estado': 'exito', 'posts': posts})
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': str(e)})
+
+@principal.route('/api/comunidad/posts', methods=['POST'])
+@requerir_login
+def api_crear_post():
+    """Crea un nuevo post en la comunidad."""
+    datos = request.json or {}
+    titulo = datos.get('titulo', '').strip()
+    contenido = datos.get('contenido', '').strip()
+    tipo = datos.get('tipo', 'tip').strip()
+    
+    if not titulo or not contenido:
+        return jsonify({'estado': 'error', 'mensaje': 'Título y contenido son obligatorios.'})
+        
+    usuario_id = session.get('usuario_id')
+    if not usuario_id:
+        return jsonify({'estado': 'error', 'mensaje': 'No autorizado.'}), 401
+        
+    try:
+        from app.auth import run_query
+        run_query('''
+            INSERT INTO comunidad_posts (usuario_id, titulo, contenido, tipo)
+            VALUES (?, ?, ?, ?)
+        ''', (usuario_id, titulo, contenido, tipo), commit=True)
+        return jsonify({'estado': 'exito', 'mensaje': 'Post creado correctamente.'})
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': str(e)})

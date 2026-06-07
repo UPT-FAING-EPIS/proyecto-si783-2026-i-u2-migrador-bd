@@ -81,6 +81,7 @@
                     <a href="/migracion" class="{% if request.path == '/migracion' %}activo{% endif %}">Migración</a>
                     <a href="/cli" class="{% if request.path == '/cli' %}activo{% endif %}" style="color: #10b981; font-family: monospace; font-weight: bold;">>_ CLI</a>
                     <a href="/historial" class="{% if request.path == '/historial' %}activo{% endif %}">Historial</a>
+                    <a href="/comunidad" class="{% if request.path == '/comunidad' %}activo{% endif %}">Comunidad</a>
                     {% if session.rol == 'admin' %}
                         <a href="/monitoreo-ip" class="{% if request.path == '/monitoreo-ip' %}activo{% endif %}">Monitoreo IP</a>
                         <a href="/admin" class="{% if request.path == '/admin' %}activo{% endif %}">Administración</a>

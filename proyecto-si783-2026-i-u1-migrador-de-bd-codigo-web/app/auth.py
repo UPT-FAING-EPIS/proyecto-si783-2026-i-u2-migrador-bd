@@ -143,6 +143,17 @@ def inicializar_bd():
                         UNIQUE(proveedor, proveedor_id)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 ''', commit=True)
+                run_query('''
+                    CREATE TABLE IF NOT EXISTS comunidad_posts (
+                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        usuario_id INT NOT NULL,
+                        titulo VARCHAR(255) NOT NULL,
+                        contenido TEXT NOT NULL,
+                        tipo VARCHAR(50) NOT NULL,
+                        creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                ''', commit=True)
             except Exception:
                 # Si falla, dejar que el administrador importe el script manualmente
                 print('No se pudo crear tablas en MySQL. Importa el script SQL manualmente.')
@@ -198,6 +209,17 @@ def inicializar_bd():
                 creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
                 UNIQUE(proveedor, proveedor_id)
+            )
+        # Crear tabla comunidad_posts si no existe
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS comunidad_posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id INTEGER NOT NULL,
+                titulo TEXT NOT NULL,
+                contenido TEXT NOT NULL,
+                tipo TEXT NOT NULL,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
             )
         ''')
         conn.commit()
