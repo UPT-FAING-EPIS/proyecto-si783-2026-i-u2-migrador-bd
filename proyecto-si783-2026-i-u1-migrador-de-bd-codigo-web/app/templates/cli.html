@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block titulo %}CLI de Migración - MigradorBD{% endblock %}
+
+{% block contenido %}
+<style>
+    /* Terminal Styles */
+    .terminal-container {
+        background-color: #0f172a;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        padding: 0;
+        margin-top: 20px;
+        overflow: hidden;
+        border: 1px solid #334155;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        color: #e2e8f0;
+        height: 70vh;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .terminal-header {
+        background-color: #1e293b;
+        padding: 10px 15px;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid #334155;
+    }
+    
+    .terminal-dots {
+        display: flex;
+        gap: 6px;
+    }
+    
+    .terminal-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+    .dot-red { background-color: #ef4444; }
+    .dot-yellow { background-color: #f59e0b; }
+    .dot-green { background-color: #10b981; }
+    
+    .terminal-title {
+        flex: 1;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: bold;
+    }
+    
+    .terminal-body {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    .terminal-line {
+        margin-bottom: 5px;
+        word-break: break-all;
+    }
+    
+    .terminal-prompt-line {
+        display: flex;
+        align-items: flex-start;
+    }
+    
+    .prompt {
+        color: #10b981;
+        font-weight: bold;
+        margin-right: 10px;
+        white-space: nowrap;
+    }
+    
+    .prompt-input {
+        background: transparent;
+        border: none;
+        color: #e2e8f0;
+        font-family: inherit;
+        font-size: inherit;
+        flex: 1;
+        outline: none;
+        caret-color: #10b981;
+    }
+    
+    .color-green { color: #10b981; }
+    .color-blue { color: #3b82f6; }
+    .color-yellow { color: #f59e0b; }
+    .color-red { color: #ef4444; }
+    .color-gray { color: #94a3b8; }
+    .color-white { color: #ffffff; }
+    
+    /* Scrollbar */
+    .terminal-body::-webkit-scrollbar {
+        width: 8px;
+    }
+    .terminal-body::-webkit-scrollbar-track {
+        background: #0f172a;
+    }
+    .terminal-body::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
+    }
+</style>
+
+<h2>CLI de Migración Interactiva</h2>
+<p style="color:#666;">Controla el robusto motor de migración mediante comandos. Escribe <span style="color:#244a7c; font-family:monospace; font-weight:bold;">help</span> para empezar.</p>
+
+<div class="terminal-container" onclick="enfocarInput()">
+    <div class="terminal-header">
+        <div class="terminal-dots">
+            <div class="terminal-dot dot-red"></div>
+            <div class="terminal-dot dot-yellow"></div>
+            <div class="terminal-dot dot-green"></div>
+        </div>
+        <div class="terminal-title">migrador-cli ~ bash</div>
+        <div style="width: 42px;"></div>
+    </div>
+    
+    <div class="terminal-body" id="terminal-body">
+        <div class="terminal-line">
+            <span class="color-green font-bold">MigradorBD v2.0 - Interfaz de Línea de Comandos</span>
+        </div>
+        <div class="terminal-line color-gray">
+            Cargando motor de migración robusto... [OK]
+        </div>
+        <div class="terminal-line color-gray" style="margin-bottom: 15px;">
+            Soporte nativo para Tablas, Vistas, Triggers, Procedimientos Almacenados e Índices.
+        </div>
+        
+        <div id="output-container"></div>
+        
+        <div class="terminal-prompt-line" id="active-prompt-container">
+            <span class="prompt">{{ session.usuario }}@migrador:~$</span>
+            <input type="text" class="prompt-input" id="cli-input" autocomplete="off" spellcheck="false" autofocus>
+        </div>
+    </div>
+</div>
+
+<script>
+    const input = document.getElementById('cli-input');
+    const outputContainer = document.getElementById('output-container');
+    const terminalBody = document.getElementById('terminal-body');
+    const promptText = "{{ session.usuario }}@migrador:~$";
+    
+    let history = [];
+    let historyIndex = -1;
+
+    function enfocarInput() {
+        input.focus();
+    }
+
+    function addLineToOutput(htmlContent) {
+        const line = document.createElement('div');
+        line.className = 'terminal-line';
+        line.innerHTML = htmlContent;
+        outputContainer.appendChild(line);
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+
+    input.addEventListener('keydown', async function(e) {
+        if (e.key === 'Enter') {
+            const command = input.value.trim();
+            
+            // Add user command to output
+            addLineToOutput(`<span class="prompt">${promptText}</span> <span class="color-white">${escapeHtml(command)}</span>`);
+            
+            input.value = '';
+            
+            if (command) {
+                history.push(command);
+                historyIndex = history.length;
+                await procesarComando(command);
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (historyIndex > 0) {
+                historyIndex--;
+                input.value = history[historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                input.value = history[historyIndex];
+            } else {
+                historyIndex = history.length;
+                input.value = '';
+            }
+        }
+    });
+
+    function escapeHtml(unsafe) {
+        return unsafe
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
+    }
+
+    async function procesarComando(comandoRaw) {
+        const command = comandoRaw.trim();
+        const args = command.split(' ').filter(Boolean);
+        const cmd = args[0].toLowerCase();
+
+        // Local commands
+        if (cmd === 'clear') {
+            outputContainer.innerHTML = '';
+            return;
+        }
+
+        // Send to backend API
+        try {
+            // Disabled input while processing
+            input.disabled = true;
+            
+            const response = await fetch('/api/cli/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: command })
+            });
+            
+            const data = await response.json();
+            
+            if (data.lines) {
+                data.lines.forEach(line => addLineToOutput(line));
+            } else if (data.html) {
+                addLineToOutput(data.html);
+            } else {
+                addLineToOutput(`<span class="color-red">Error interno del servidor.</span>`);
+            }
+        } catch (error) {
+            addLineToOutput(`<span class="color-red">Error de conexión: ${error.message}</span>`);
+        } finally {
+            input.disabled = false;
+            enfocarInput();
+        }
+    }
+</script>
+{% endblock %}

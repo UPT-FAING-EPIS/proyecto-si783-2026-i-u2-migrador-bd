@@ -1448,6 +1448,145 @@ def actualizar_perfil():
             usuario_actual = obtener_usuario_actual()
             return render_template('perfil.html', perfil=perfil_data, usuario=usuario_actual, error=mensaje)
 
+@principal.route('/cli')
+@requerir_login
+def cli_page():
+    return render_template('cli.html')
+
+@principal.route('/api/cli/execute', methods=['POST'])
+@requerir_login
+def api_cli_execute():
+    datos = request.json or {}
+    command_str = datos.get('command', '').strip()
+    if not command_str:
+        return jsonify({'lines': []})
+        
+    args = command_str.split()
+    cmd = args[0].lower()
+    
+    if cmd == 'help':
+        return jsonify({'html': '''
+            <div class="color-blue font-bold">Comandos disponibles:</div>
+            <div><span class="color-yellow">help</span> - Muestra esta ayuda</div>
+            <div><span class="color-yellow">status</span> - Muestra el estado actual de la migración</div>
+            <div><span class="color-yellow">ls</span> - Lista los archivos disponibles para migrar</div>
+            <div><span class="color-yellow">set-source &lt;archivo&gt;</span> - Configura el archivo de origen</div>
+            <div><span class="color-yellow">set-target &lt;motor&gt;</span> - Configura el motor destino</div>
+            <div><span class="color-yellow">migrate</span> - Inicia la migración de datos, vistas, triggers, etc.</div>
+            <div><span class="color-yellow">clear</span> - Limpia la terminal</div>
+        '''})
+        
+    elif cmd == 'status':
+        origen = estado_app.get('origen')
+        destino = estado_app.get('destino')
+        o_txt = origen.ruta if origen else 'No configurado'
+        d_txt = destino.motor if destino else 'No configurado'
+        return jsonify({'html': f'''
+            <div>Origen actual: <span class="color-green">{o_txt}</span></div>
+            <div>Destino actual: <span class="color-green">{d_txt}</span></div>
+        '''})
+        
+    elif cmd == 'ls':
+        carpeta_usuario = _carpeta_upload_usuario()
+        try:
+            archivos = os.listdir(carpeta_usuario)
+            if not archivos:
+                return jsonify({'html': '<span class="color-gray">No hay archivos en tu carpeta. Usa la interfaz gráfica para subir un archivo.</span>'})
+            
+            html = '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">'
+            for arch in archivos:
+                html += f'<div class="color-blue">{arch}</div>'
+            html += '</div>'
+            return jsonify({'html': html})
+        except Exception as e:
+            return jsonify({'html': f'<span class="color-red">Error al listar: {str(e)}</span>'})
+            
+    elif cmd == 'set-source':
+        if len(args) < 2:
+            return jsonify({'html': '<span class="color-red">Uso: set-source &lt;archivo&gt;</span>'})
+        archivo = args[1]
+        carpeta_usuario = _carpeta_upload_usuario()
+        ruta = os.path.join(carpeta_usuario, secure_filename(archivo))
+        
+        if not os.path.exists(ruta):
+            return jsonify({'html': f'<span class="color-red">Error: el archivo {archivo} no existe. Usa "ls" para ver opciones.</span>'})
+            
+        try:
+            tipo, mensaje, _ = DetectorBaseDatos.detectar(ruta, archivo)
+            if tipo == 'Desconocido':
+                return jsonify({'html': f'<span class="color-red">Archivo no soportado: {mensaje}</span>'})
+                
+            origen = ConectorOrigen(ruta, tipo)
+            origen.mensaje_deteccion = mensaje
+            if not origen.tablas and not getattr(origen, 'vistas', []):
+                return jsonify({'html': '<span class="color-red">El archivo no contiene tablas ni objetos soportados.</span>'})
+                
+            estado_app['origen'] = origen
+            return jsonify({'html': f'''
+                <span class="color-green">Origen configurado con éxito.</span><br>
+                Motor detectado: <span class="color-yellow">{tipo}</span><br>
+                Tablas base detectadas: {len(origen.tablas)}
+            '''})
+        except Exception as e:
+            return jsonify({'html': f'<span class="color-red">Error cargando origen: {str(e)}</span>'})
+            
+    elif cmd == 'set-target':
+        if len(args) < 2:
+            return jsonify({'html': '<span class="color-red">Uso: set-target &lt;motor&gt;</span>'})
+        motor = ' '.join(args[1:])
+        motores_validos = [
+            'SQLite', 'PostgreSQL', 'MySQL', 'MariaDB', 'Microsoft SQL Server', 'Oracle',
+            'Snowflake', 'Amazon Redshift', 'Azure SQL Database', 'IBM Db2', 'Google BigQuery',
+            'MongoDB', 'Elasticsearch', 'Redis', 'Apache Cassandra', 'MongoDB Atlas'
+        ]
+        
+        motor_encontrado = None
+        for m in motores_validos:
+            if m.lower() == motor.lower() or m.lower().startswith(motor.lower()):
+                motor_encontrado = m
+                break
+                
+        if not motor_encontrado:
+            return jsonify({'html': f'<span class="color-red">Motor no válido.</span> Opciones: {", ".join(motores_validos)}'})
+            
+        try:
+            destino = CargadorDestino(motor_encontrado)
+            estado_app['destino'] = destino
+            
+            if estado_app['origen'] and estado_app['origen'].esquema:
+                if hasattr(estado_app['origen'], 'tabla_a_esquema'):
+                    destino.tabla_a_esquema = estado_app['origen'].tabla_a_esquema
+                if hasattr(estado_app['origen'], 'esquemas'):
+                    destino.crear_esquemas(estado_app['origen'].esquemas)
+                destino.crear_estructura(estado_app['origen'].esquema, tabla_a_esquema=destino.tabla_a_esquema)
+                
+            return jsonify({'html': f'<span class="color-green">Destino configurado como {motor_encontrado}. Estructuras SQL creadas. Escribe "migrate" para iniciar.</span>'})
+        except Exception as e:
+            return jsonify({'html': f'<span class="color-red">Error configurando destino: {str(e)}</span>'})
+            
+    elif cmd == 'migrate':
+        if not estado_app['origen']:
+            return jsonify({'html': '<span class="color-red">Error: origen no configurado. Usa set-source.</span>'})
+        if not estado_app['destino']:
+            return jsonify({'html': '<span class="color-red">Error: destino no configurado. Usa set-target.</span>'})
+        if estado_app['proceso_activo']:
+            return jsonify({'html': '<span class="color-yellow">Ya hay una migración en curso. Verifica la barra superior.</span>'})
+            
+        estado_app['proceso_activo'] = True
+        estado_app['metricas'] = {'extraidos': 0, 'cargados': 0, 'errores': 0, 'tablas_ok': 0}
+        estado_app['_ip_migracion'] = request.remote_addr or 'desconocida'
+        socketio.start_background_task(ejecutar_migracion)
+        
+        return jsonify({'html': '''
+            <span class="color-green font-bold">[ OK ] Migración iniciada en segundo plano.</span><br>
+            <span class="color-gray">El sistema está procesando Tablas, Vistas, Triggers y Procedimientos.</span><br>
+            <span class="color-gray">Revisa "status" en unos segundos o visita la pestaña Historial para ver los resultados.</span>
+        '''})
+        
+    else:
+        cmd_safe = cmd.replace('<', '&lt;').replace('>', '&gt;')
+        return jsonify({'html': f'<span class="color-red">Comando no encontrado: {cmd_safe}</span>'})
+
 @socketio.on('conectar')
 def conectar():
     socketio.emit('log', {'mensaje': 'Sistema listo. Suba un archivo para comenzar.'})
