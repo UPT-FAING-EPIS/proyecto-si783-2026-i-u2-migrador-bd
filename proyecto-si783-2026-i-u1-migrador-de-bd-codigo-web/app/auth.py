@@ -183,6 +183,11 @@ def inicializar_bd():
                             UNIQUE(seguidor_id, seguido_id)
                         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                     ''', commit=True)
+                    try:
+                        run_query('CREATE INDEX idx_comunidad_likes_post ON comunidad_likes(post_id)', commit=True)
+                        run_query('CREATE INDEX idx_comunidad_comentarios_post ON comunidad_comentarios(post_id)', commit=True)
+                    except Exception:
+                        pass
                 except Exception as e:
                     print(f"Error creando comunidad_posts: {e}")
         except Exception:
@@ -261,6 +266,11 @@ def inicializar_bd():
                         UNIQUE(seguidor_id, seguido_id)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 ''', commit=True)
+                try:
+                    run_query('CREATE INDEX idx_comunidad_likes_post ON comunidad_likes(post_id)', commit=True)
+                    run_query('CREATE INDEX idx_comunidad_comentarios_post ON comunidad_comentarios(post_id)', commit=True)
+                except Exception:
+                    pass
             except Exception:
                 # Si falla, dejar que el administrador importe el script manualmente
                 print('No se pudo crear tablas en MySQL. Importa el script SQL manualmente.')
@@ -373,6 +383,9 @@ def inicializar_bd():
                 UNIQUE(seguidor_id, seguido_id)
             )
         ''')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_comunidad_likes_post ON comunidad_likes(post_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_comunidad_comentarios_post ON comunidad_comentarios(post_id)')
+        
         conn.commit()
         conn.close()
 
