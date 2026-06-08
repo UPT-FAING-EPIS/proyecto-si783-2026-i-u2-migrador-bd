@@ -14,10 +14,18 @@
     
     <!-- Filtros / Pestañas -->
     <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
-        <button onclick="filtrarPosts('todo')" id="tab-todo" class="tab-btn activo" style="background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #3b82f6; border-bottom: 3px solid #3b82f6; margin-bottom: -12px;">🚀 Todo</button>
-        <button onclick="filtrarPosts('pregunta')" id="tab-pregunta" class="tab-btn" style="background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px;">❓ Dudas</button>
-        <button onclick="filtrarPosts('aporte')" id="tab-aporte" class="tab-btn" style="background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px;">💡 Aportes</button>
-        <button onclick="filtrarPosts('mapeo')" id="tab-mapeo" class="tab-btn" style="background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px;">⚡ Recetas</button>
+        <button onclick="filtrarPosts('todo')" id="tab-todo" class="tab-btn activo" style="display: flex; align-items: center; gap: 5px; background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #3b82f6; border-bottom: 3px solid #3b82f6; margin-bottom: -12px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg> Todo
+        </button>
+        <button onclick="filtrarPosts('pregunta')" id="tab-pregunta" class="tab-btn" style="display: flex; align-items: center; gap: 5px; background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> Dudas
+        </button>
+        <button onclick="filtrarPosts('aporte')" id="tab-aporte" class="tab-btn" style="display: flex; align-items: center; gap: 5px; background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg> Aportes
+        </button>
+        <button onclick="filtrarPosts('mapeo')" id="tab-mapeo" class="tab-btn" style="display: flex; align-items: center; gap: 5px; background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Recetas
+        </button>
     </div>
 
     <!-- Feed de Posts -->
@@ -107,9 +115,9 @@
     });
 
     const coloresTipo = {
-        'pregunta': { bg: '#eff6ff', color: '#3b82f6', icon: '❓' },
-        'aporte': { bg: '#f0fdf4', color: '#22c55e', icon: '💡' },
-        'mapeo': { bg: '#fef2f2', color: '#ef4444', icon: '⚡' }
+        'pregunta': { bg: '#eff6ff', color: '#3b82f6', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>' },
+        'aporte': { bg: '#f0fdf4', color: '#22c55e', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>' },
+        'mapeo': { bg: '#fef2f2', color: '#ef4444', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>' }
     };
 
     let postActualParaComentario = null;
@@ -158,6 +166,14 @@
         const modal = document.getElementById('modal-perfil');
         modal.style.display = 'flex';
         
+        // Optimistic UI - Mostrar esqueleto de carga
+        document.getElementById('perfil-nombre').textContent = 'Cargando...';
+        document.getElementById('perfil-descripcion').textContent = '';
+        document.getElementById('perfil-seguidores').textContent = '-';
+        document.getElementById('perfil-seguidos').textContent = '-';
+        document.getElementById('perfil-foto').src = 'https://ui-avatars.com/api/?name=Cargando&background=f1f5f9&color=94a3b8';
+        document.getElementById('btn-seguir').style.display = 'none';
+
         try {
             const resp = await fetch('/api/usuarios/' + usuarioId + '/perfil');
             const data = await resp.json();
@@ -271,12 +287,17 @@
     }
 
     async function toggleLike(postId) {
+        // Optimistic UI update para velocidad visual instantánea
+        const post = todosLosPosts.find(p => p.id === postId);
+        if (post) {
+            post.liked = !post.liked;
+            post.likes = post.liked ? post.likes + 1 : post.likes - 1;
+            renderizarListaFiltrada();
+        }
+
         try {
-            const resp = await fetch('/api/comunidad/posts/' + postId + '/like', { method: 'POST' });
-            const data = await resp.json();
-            if (data.estado === 'exito') {
-                cargarPosts(); // Refrescar para ver el nuevo conteo
-            }
+            await fetch('/api/comunidad/posts/' + postId + '/like', { method: 'POST' });
+            // No hacemos cargarPosts(), el backend emitirá el socket si fue exitoso
         } catch(e) { console.error(e); }
     }
 
@@ -288,13 +309,16 @@
         if (post.tipo === 'pregunta') {
             actionsHtml = `
                 <button onclick="abrirComentarios(${post.id})" style="background: none; border: none; color: #64748b; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    💬 Comentarios (${post.comentarios || 0})
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> Comentarios (${post.comentarios || 0})
                 </button>
             `;
         } else {
+            const likeIcon = post.liked 
+                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>'
+                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
             actionsHtml = `
                 <button onclick="toggleLike(${post.id})" style="background: none; border: none; color: ${post.liked ? '#ef4444' : '#64748b'}; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    ${post.liked ? '❤️' : '🤍'} Me gusta (${post.likes || 0})
+                    ${likeIcon} Me gusta (${post.likes || 0})
                 </button>
             `;
         }
@@ -304,7 +328,7 @@
         if (post.autor_id == miUsuarioId) {
             deleteBtnHtml = `
                 <button onclick="eliminarPost(${post.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 16px; margin-left: 10px;" title="Eliminar Publicación">
-                    🗑️
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
             `;
         }
@@ -356,14 +380,12 @@
     async function eliminarPost(postId) {
         if (!confirm('¿Estás seguro de que deseas eliminar esta publicación? Esto no se puede deshacer.')) return;
         
+        // Optimistic UI delete
+        todosLosPosts = todosLosPosts.filter(p => p.id !== postId);
+        renderizarListaFiltrada();
+
         try {
-            const resp = await fetch('/api/comunidad/posts/' + postId, { method: 'DELETE' });
-            const data = await resp.json();
-            if (data.estado === 'exito') {
-                cargarPosts();
-            } else {
-                alert('Error al eliminar: ' + data.mensaje);
-            }
+            await fetch('/api/comunidad/posts/' + postId, { method: 'DELETE' });
         } catch(e) { console.error(e); }
     }
 
