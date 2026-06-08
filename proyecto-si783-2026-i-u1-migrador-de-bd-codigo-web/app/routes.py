@@ -1696,7 +1696,8 @@ def api_obtener_posts():
                    u.id, u.usuario, u.foto_perfil,
                    (SELECT COUNT(*) FROM comunidad_likes WHERE post_id = p.id),
                    (SELECT COUNT(*) FROM comunidad_comentarios WHERE post_id = p.id),
-                   (SELECT COUNT(*) FROM comunidad_likes WHERE post_id = p.id AND usuario_id = ?)
+                   (SELECT COUNT(*) FROM comunidad_likes WHERE post_id = p.id AND usuario_id = ?),
+                   p.resuelto
             FROM comunidad_posts p
             JOIN usuarios u ON p.usuario_id = u.id
             ORDER BY p.creado_en DESC
@@ -1717,7 +1718,8 @@ def api_obtener_posts():
                     'foto_perfil': row[7] or 'https://ui-avatars.com/api/?name=' + row[6] + '&background=random',
                     'likes': row[8],
                     'comentarios': row[9],
-                    'liked': bool(row[10])
+                    'liked': bool(row[10]),
+                    'resuelto': bool(row[11])
                 })
         return jsonify({'estado': 'exito', 'posts': posts})
     except Exception as e:
@@ -1905,5 +1907,31 @@ def api_eliminar_post(post_id):
         from app import socketio
         socketio.emit('actualizar_comunidad')
         return jsonify({'estado': 'exito', 'mensaje': 'Post eliminado.'})
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': str(e)})
+
+@principal.route('/api/comunidad/posts/<int:post_id>/resolver', methods=['POST'])
+@requerir_login
+def api_resolver_post(post_id):
+    """Marca un post como resuelto si el usuario activo es el autor."""
+    usuario_id = session.get('usuario_id')
+    try:
+        from app.auth import run_query
+        # Verificar si el post existe y el autor es el correcto
+        post = run_query('SELECT usuario_id, tipo FROM comunidad_posts WHERE id = ?', (post_id,), fetchone=True)
+        if not post:
+            return jsonify({'estado': 'error', 'mensaje': 'Post no encontrado.'}), 404
+            
+        if post[0] != usuario_id:
+            return jsonify({'estado': 'error', 'mensaje': 'No tienes permiso para resolver este post.'}), 403
+            
+        if post[1] != 'pregunta':
+            return jsonify({'estado': 'error', 'mensaje': 'Solo las preguntas (Dudas) pueden marcarse como resueltas.'}), 400
+            
+        run_query('UPDATE comunidad_posts SET resuelto = 1 WHERE id = ?', (post_id,), commit=True)
+        
+        from app import socketio
+        socketio.emit('actualizar_comunidad')
+        return jsonify({'estado': 'exito', 'mensaje': 'Post marcado como resuelto.'})
     except Exception as e:
         return jsonify({'estado': 'error', 'mensaje': str(e)})

@@ -26,6 +26,9 @@
         <button onclick="filtrarPosts('mapeo')" id="tab-mapeo" class="tab-btn" style="display: flex; align-items: center; gap: 5px; background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Recetas
         </button>
+        <button onclick="filtrarPosts('resueltos')" id="tab-resueltos" class="tab-btn" style="display: flex; align-items: center; gap: 5px; background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px; margin-left: auto;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Resueltos
+        </button>
     </div>
 
     <!-- Feed de Posts -->
@@ -141,7 +144,15 @@
     
     function renderizarListaFiltrada() {
         const container = document.getElementById('posts-container');
-        const postsFiltrados = filtroActual === 'todo' ? todosLosPosts : todosLosPosts.filter(p => p.tipo === filtroActual);
+        
+        let postsFiltrados = [];
+        if (filtroActual === 'resueltos') {
+            postsFiltrados = todosLosPosts.filter(p => p.resuelto);
+        } else if (filtroActual === 'todo') {
+            postsFiltrados = todosLosPosts.filter(p => !p.resuelto);
+        } else {
+            postsFiltrados = todosLosPosts.filter(p => p.tipo === filtroActual && !p.resuelto);
+        }
         
         if (postsFiltrados.length === 0) {
             container.innerHTML = '<div style="text-align: center; padding: 40px; color: #94a3b8;">No hay publicaciones en esta sección.</div>';
@@ -301,16 +312,41 @@
         } catch(e) { console.error(e); }
     }
 
+    async function marcarSolucionado(postId) {
+        if (!confirm('¿Marcar como solucionado? Este post pasará a la pestaña de "Resueltos".')) return;
+        
+        const post = todosLosPosts.find(p => p.id === postId);
+        if (post) {
+            post.resuelto = true;
+            renderizarListaFiltrada();
+        }
+        
+        try {
+            await fetch('/api/comunidad/posts/' + postId + '/resolver', { method: 'POST' });
+        } catch(e) { console.error(e); }
+    }
+
     function renderizarPost(post) {
         const conf = coloresTipo[post.tipo] || coloresTipo['pregunta'];
         const fecha = new Date(post.creado_en).toLocaleString();
         
         let actionsHtml = '';
         if (post.tipo === 'pregunta') {
+            let resolverBtn = '';
+            if (!post.resuelto && post.autor_id == miUsuarioId) {
+                resolverBtn = `
+                    <button onclick="marcarSolucionado(${post.id})" style="background: #10b981; color: white; border: none; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; margin-left: auto;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Resuelto
+                    </button>
+                `;
+            }
             actionsHtml = `
-                <button onclick="abrirComentarios(${post.id})" style="background: none; border: none; color: #64748b; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> Comentarios (${post.comentarios || 0})
-                </button>
+                <div style="display: flex; width: 100%; align-items: center;">
+                    <button onclick="abrirComentarios(${post.id})" style="background: none; border: none; color: #64748b; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> Comentarios (${post.comentarios || 0})
+                    </button>
+                    ${resolverBtn}
+                </div>
             `;
         } else {
             const likeIcon = post.liked 
@@ -333,8 +369,11 @@
             `;
         }
 
+        const postOpacity = post.resuelto ? '0.7' : '1';
+        const tituloEstilo = post.resuelto ? 'text-decoration: line-through; color: #64748b;' : 'color: #0f172a;';
+
         return `
-            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); opacity: ${postOpacity};">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <img src="${post.foto_perfil}" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer;" onclick="verPerfil(${post.autor_id})">
@@ -344,11 +383,11 @@
                         </div>
                     </div>
                     <div style="background: ${conf.bg}; color: ${conf.color}; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 4px;">
-                        ${conf.icon} ${post.tipo.toUpperCase()}
+                        ${conf.icon} ${post.tipo.toUpperCase()} ${post.resuelto ? ' (RESUELTO)' : ''}
                     </div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="color: #0f172a; margin-top: 0; margin-bottom: 10px; font-size: 20px;">${post.titulo}</h3>
+                    <h3 style="margin-top: 0; margin-bottom: 10px; font-size: 20px; ${tituloEstilo}">${post.titulo}</h3>
                     ${deleteBtnHtml}
                 </div>
                 <div style="color: #475569; line-height: 1.6; white-space: pre-wrap; margin-bottom: 15px;">${post.contenido}</div>

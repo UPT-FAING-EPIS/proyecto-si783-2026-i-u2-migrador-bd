@@ -132,6 +132,11 @@ def inicializar_bd():
                     run_query('ALTER TABLE usuarios ADD COLUMN descripcion VARCHAR(500)', commit=True)
                 except Exception:
                     pass
+                
+                try:
+                    run_query('ALTER TABLE comunidad_posts ADD COLUMN resuelto TINYINT(1) NOT NULL DEFAULT 0', commit=True)
+                except Exception:
+                    pass
                 try:
                     run_query('''
                         CREATE TABLE IF NOT EXISTS comunidad_posts (
@@ -140,6 +145,7 @@ def inicializar_bd():
                             titulo VARCHAR(255) NOT NULL,
                             contenido TEXT NOT NULL,
                             tipo VARCHAR(50) NOT NULL,
+                            resuelto TINYINT(1) NOT NULL DEFAULT 0,
                             creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                             FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
                         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -217,6 +223,7 @@ def inicializar_bd():
                         titulo VARCHAR(255) NOT NULL,
                         contenido TEXT NOT NULL,
                         tipo VARCHAR(50) NOT NULL,
+                        resuelto TINYINT(1) NOT NULL DEFAULT 0,
                         creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -320,10 +327,17 @@ def inicializar_bd():
                 titulo TEXT NOT NULL,
                 contenido TEXT NOT NULL,
                 tipo TEXT NOT NULL,
+                resuelto BOOLEAN DEFAULT 0,
                 creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
             )
         ''')
+        
+        # Verificar columna resuelto en comunidad_posts
+        c.execute("PRAGMA table_info(comunidad_posts)")
+        cp_columns = [column[1] for column in c.fetchall()]
+        if 'resuelto' not in cp_columns:
+            c.execute("ALTER TABLE comunidad_posts ADD COLUMN resuelto BOOLEAN DEFAULT 0")
 
         # Crear tablas sociales (likes, comentarios, seguidores) si no existen
         c.execute('''
