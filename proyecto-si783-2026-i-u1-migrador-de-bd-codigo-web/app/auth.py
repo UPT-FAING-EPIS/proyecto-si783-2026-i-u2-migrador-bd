@@ -20,7 +20,27 @@ DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'auth.db')
 # Detectar si se debe usar MySQL por variables de entorno
 USE_MYSQL = bool(os.getenv('MYSQL_DB'))
 
+# Inicializar pool de conexiones si se usa MySQL
+mysql_pool = None
+if USE_MYSQL and mysql:
+    try:
+        from mysql.connector import pooling
+        mysql_pool = pooling.MySQLConnectionPool(
+            pool_name="migrador_pool",
+            pool_size=10,
+            pool_reset_session=True,
+            host=os.getenv('MYSQL_HOST', 'localhost'),
+            port=int(os.getenv('MYSQL_PORT', 3306)),
+            user=os.getenv('MYSQL_USER'),
+            password=os.getenv('MYSQL_PASSWORD'),
+            database=os.getenv('MYSQL_DB')
+        )
+    except Exception as e:
+        print(f"Error inicializando pool de conexiones: {e}")
+
 def get_mysql_conn():
+    if mysql_pool:
+        return mysql_pool.get_connection()
     return mysql.connector.connect(
         host=os.getenv('MYSQL_HOST', 'localhost'),
         port=int(os.getenv('MYSQL_PORT', 3306)),
