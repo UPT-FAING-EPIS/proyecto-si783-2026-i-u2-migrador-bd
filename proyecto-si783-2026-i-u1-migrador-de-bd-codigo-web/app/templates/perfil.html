@@ -36,6 +36,11 @@
                 </div>
             </div>
 
+            <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 25px; margin-top: 10px; text-align: center;">
+                <div><strong style="font-size: 22px; color: #244a7c;">{{ seguidores }}</strong><br><span style="font-size: 13px; color: #64748b; font-weight: 500;">Seguidores</span></div>
+                <div><strong style="font-size: 22px; color: #244a7c;">{{ seguidos }}</strong><br><span style="font-size: 13px; color: #64748b; font-weight: 500;">Seguidos</span></div>
+            </div>
+
             <form action="{{ url_for('principal.actualizar_perfil') }}" method="POST" enctype="multipart/form-data" class="formulario-perfil">
                 <div class="grupo-formulario">
                     <label for="foto">Cambiar foto de perfil</label>
@@ -51,9 +56,9 @@
                     <textarea id="descripcion" name="descripcion" rows="4" class="form-control" placeholder="Escribe algo sobre ti...">{{ perfil.descripcion or '' }}</textarea>
                 </div>
 
-                <div class="acciones-formulario">
-                    <button type="submit" class="btn btn-primario">Actualizar Perfil</button>
-                    <a href="/" class="btn btn-secundario">Cancelar</a>
+                <div class="acciones-formulario" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="submit" class="btn btn-primario" style="background-color: #244a7c; border-color: #244a7c; color: white; flex: 1;">Actualizar Perfil</button>
+                    <a href="/" class="btn btn-secundario" style="background-color: #244a7c; border-color: #244a7c; color: white; flex: 1; text-align: center;">Cancelar</a>
                 </div>
             </form>
         </div>

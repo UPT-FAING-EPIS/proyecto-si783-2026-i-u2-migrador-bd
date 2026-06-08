@@ -1451,8 +1451,13 @@ def perfil():
     if not perfil_data:
         return redirect(url_for('principal.login'))
     
+    from app.auth import run_query
+    
+    seguidores = run_query('SELECT COUNT(*) FROM comunidad_seguidores WHERE seguido_id = ?', (usuario_id,), fetchone=True)[0] or 0
+    seguidos = run_query('SELECT COUNT(*) FROM comunidad_seguidores WHERE seguidor_id = ?', (usuario_id,), fetchone=True)[0] or 0
+    
     usuario_actual = obtener_usuario_actual()
-    return render_template('perfil.html', perfil=perfil_data, usuario=usuario_actual)
+    return render_template('perfil.html', perfil=perfil_data, usuario=usuario_actual, seguidores=seguidores, seguidos=seguidos)
 
 @principal.route('/usuario/foto')
 @requerir_login
