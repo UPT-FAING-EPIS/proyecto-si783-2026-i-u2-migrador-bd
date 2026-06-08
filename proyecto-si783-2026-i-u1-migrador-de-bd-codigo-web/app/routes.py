@@ -1745,6 +1745,8 @@ def api_crear_post():
             INSERT INTO comunidad_posts (usuario_id, titulo, contenido, tipo)
             VALUES (?, ?, ?, ?)
         ''', (usuario_id, titulo, contenido, tipo), commit=True)
+        from app import socketio
+        socketio.emit('actualizar_comunidad')
         return jsonify({'estado': 'exito', 'mensaje': 'Post creado correctamente.'})
     except Exception as e:
         return jsonify({'estado': 'error', 'mensaje': str(e)})
@@ -1758,11 +1760,14 @@ def api_toggle_like(post_id):
         from app.auth import run_query
         # Verificar si ya existe
         existe = run_query('SELECT id FROM comunidad_likes WHERE post_id = ? AND usuario_id = ?', (post_id, usuario_id), fetchone=True)
+        from app import socketio
         if existe:
             run_query('DELETE FROM comunidad_likes WHERE post_id = ? AND usuario_id = ?', (post_id, usuario_id), commit=True)
+            socketio.emit('actualizar_comunidad')
             return jsonify({'estado': 'exito', 'accion': 'unliked'})
         else:
             run_query('INSERT INTO comunidad_likes (post_id, usuario_id) VALUES (?, ?)', (post_id, usuario_id), commit=True)
+            socketio.emit('actualizar_comunidad')
             return jsonify({'estado': 'exito', 'accion': 'liked'})
     except Exception as e:
         return jsonify({'estado': 'error', 'mensaje': str(e)})
@@ -1784,6 +1789,9 @@ def api_comentarios(post_id):
                 INSERT INTO comunidad_comentarios (post_id, usuario_id, contenido)
                 VALUES (?, ?, ?)
             ''', (post_id, usuario_id, contenido), commit=True)
+            from app import socketio
+            socketio.emit('actualizar_comentarios', {'post_id': post_id})
+            socketio.emit('actualizar_comunidad')
             return jsonify({'estado': 'exito', 'mensaje': 'Comentario agregado.'})
         except Exception as e:
             return jsonify({'estado': 'error', 'mensaje': str(e)})
@@ -1820,22 +1828,27 @@ def api_obtener_perfil(target_id):
     usuario_id = session.get('usuario_id')
     try:
         from app.auth import run_query
-        user_res = run_query('SELECT id, usuario, descripcion, foto_perfil FROM usuarios WHERE id = ?', (target_id,), fetchone=True)
+        query = '''
+            SELECT 
+                u.id, u.usuario, u.descripcion, u.foto_perfil,
+                (SELECT COUNT(*) FROM comunidad_seguidores WHERE seguido_id = u.id) AS seguidores,
+                (SELECT COUNT(*) FROM comunidad_seguidores WHERE seguidor_id = u.id) AS seguidos,
+                (SELECT COUNT(*) FROM comunidad_seguidores WHERE seguidor_id = ? AND seguido_id = u.id) AS lo_sigo
+            FROM usuarios u
+            WHERE u.id = ?
+        '''
+        user_res = run_query(query, (usuario_id, target_id), fetchone=True)
         if not user_res:
             return jsonify({'estado': 'error', 'mensaje': 'Usuario no encontrado'})
             
-        seguidores = run_query('SELECT COUNT(*) FROM comunidad_seguidores WHERE seguido_id = ?', (target_id,), fetchone=True)[0]
-        seguidos = run_query('SELECT COUNT(*) FROM comunidad_seguidores WHERE seguidor_id = ?', (target_id,), fetchone=True)[0]
-        lo_sigo = bool(run_query('SELECT id FROM comunidad_seguidores WHERE seguidor_id = ? AND seguido_id = ?', (usuario_id, target_id), fetchone=True))
-        
         perfil = {
             'id': user_res[0],
             'usuario': user_res[1],
             'descripcion': user_res[2] or 'Sin descripción.',
             'foto_perfil': user_res[3] or 'https://ui-avatars.com/api/?name=' + user_res[1] + '&background=random',
-            'seguidores': seguidores,
-            'seguidos': seguidos,
-            'lo_sigo': lo_sigo,
+            'seguidores': user_res[4],
+            'seguidos': user_res[5],
+            'lo_sigo': bool(user_res[6]),
             'es_mi_perfil': usuario_id == target_id
         }
         return jsonify({'estado': 'exito', 'perfil': perfil})

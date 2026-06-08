@@ -85,6 +85,18 @@
 </div>
 
 <script>
+    const socket = io();
+    
+    socket.on('actualizar_comunidad', function() {
+        cargarPosts();
+    });
+
+    socket.on('actualizar_comentarios', function(data) {
+        if (postActualParaComentario == data.post_id) {
+            cargarComentariosLista();
+        }
+    });
+
     const coloresTipo = {
         'pregunta': { bg: '#eff6ff', color: '#3b82f6', icon: '❓' },
         'aporte': { bg: '#f0fdf4', color: '#22c55e', icon: '💡' },
