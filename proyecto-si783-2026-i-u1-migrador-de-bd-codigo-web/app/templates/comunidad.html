@@ -11,6 +11,14 @@
             + Crear Publicación
         </button>
     </div>
+    
+    <!-- Filtros / Pestañas -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
+        <button onclick="filtrarPosts('todo')" id="tab-todo" class="tab-btn activo" style="background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #3b82f6; border-bottom: 3px solid #3b82f6; margin-bottom: -12px;">🚀 Todo</button>
+        <button onclick="filtrarPosts('pregunta')" id="tab-pregunta" class="tab-btn" style="background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px;">❓ Dudas</button>
+        <button onclick="filtrarPosts('aporte')" id="tab-aporte" class="tab-btn" style="background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px;">💡 Aportes</button>
+        <button onclick="filtrarPosts('mapeo')" id="tab-mapeo" class="tab-btn" style="background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 5px 10px; color: #64748b; margin-bottom: -12px;">⚡ Recetas</button>
+    </div>
 
     <!-- Feed de Posts -->
     <div id="posts-container" style="display: flex; flex-direction: column; gap: 20px;">
@@ -85,6 +93,7 @@
 </div>
 
 <script>
+    const miUsuarioId = {{ session.usuario_id if session.usuario_id else 'null' }};
     const socket = io();
     
     socket.on('actualizar_comunidad', function() {
@@ -105,6 +114,33 @@
 
     let postActualParaComentario = null;
     let perfilActualId = null;
+    let todosLosPosts = []; // Guardar posts globalmente para filtrar
+    let filtroActual = 'todo';
+
+    // Tabs
+    function filtrarPosts(tipo) {
+        filtroActual = tipo;
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.style.color = '#64748b';
+            btn.style.borderBottom = 'none';
+        });
+        const btnActivo = document.getElementById('tab-' + tipo);
+        btnActivo.style.color = '#3b82f6';
+        btnActivo.style.borderBottom = '3px solid #3b82f6';
+        
+        renderizarListaFiltrada();
+    }
+    
+    function renderizarListaFiltrada() {
+        const container = document.getElementById('posts-container');
+        const postsFiltrados = filtroActual === 'todo' ? todosLosPosts : todosLosPosts.filter(p => p.tipo === filtroActual);
+        
+        if (postsFiltrados.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #94a3b8;">No hay publicaciones en esta sección.</div>';
+        } else {
+            container.innerHTML = postsFiltrados.map(renderizarPost).join('');
+        }
+    }
 
     // Modales POST
     function abrirModal() {
@@ -262,6 +298,16 @@
                 </button>
             `;
         }
+        
+        // Botón Eliminar si soy el autor
+        let deleteBtnHtml = '';
+        if (post.autor_id == miUsuarioId) {
+            deleteBtnHtml = `
+                <button onclick="eliminarPost(${post.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 16px; margin-left: 10px;" title="Eliminar Publicación">
+                    🗑️
+                </button>
+            `;
+        }
 
         return `
             <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -277,7 +323,10 @@
                         ${conf.icon} ${post.tipo.toUpperCase()}
                     </div>
                 </div>
-                <h3 style="color: #0f172a; margin-top: 0; margin-bottom: 10px; font-size: 20px;">${post.titulo}</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="color: #0f172a; margin-top: 0; margin-bottom: 10px; font-size: 20px;">${post.titulo}</h3>
+                    ${deleteBtnHtml}
+                </div>
                 <div style="color: #475569; line-height: 1.6; white-space: pre-wrap; margin-bottom: 15px;">${post.contenido}</div>
                 
                 <div style="display: flex; justify-content: flex-start; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 15px;">
@@ -294,17 +343,28 @@
             const container = document.getElementById('posts-container');
             
             if (data.estado === 'exito') {
-                if (data.posts.length === 0) {
-                    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #94a3b8;">No hay publicaciones todavía. ¡Sé el primero en compartir algo!</div>';
-                } else {
-                    container.innerHTML = data.posts.map(renderizarPost).join('');
-                }
+                todosLosPosts = data.posts;
+                renderizarListaFiltrada();
             } else {
                 container.innerHTML = `<div style="color: red;">Error: ${data.mensaje}</div>`;
             }
         } catch(e) {
             console.error(e);
         }
+    }
+    
+    async function eliminarPost(postId) {
+        if (!confirm('¿Estás seguro de que deseas eliminar esta publicación? Esto no se puede deshacer.')) return;
+        
+        try {
+            const resp = await fetch('/api/comunidad/posts/' + postId, { method: 'DELETE' });
+            const data = await resp.json();
+            if (data.estado === 'exito') {
+                cargarPosts();
+            } else {
+                alert('Error al eliminar: ' + data.mensaje);
+            }
+        } catch(e) { console.error(e); }
     }
 
     async function guardarPost() {

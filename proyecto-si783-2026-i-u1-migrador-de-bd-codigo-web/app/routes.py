@@ -1874,3 +1874,36 @@ def api_toggle_seguir(target_id):
             return jsonify({'estado': 'exito', 'accion': 'followed'})
     except Exception as e:
         return jsonify({'estado': 'error', 'mensaje': str(e)})
+
+@principal.route('/api/comunidad/posts/<int:post_id>', methods=['DELETE'])
+@requerir_login
+def api_eliminar_post(post_id):
+    """Elimina un post si el usuario activo es el autor."""
+    usuario_id = session.get('usuario_id')
+    try:
+        from app.auth import run_query
+        # Verificar si el post existe y el autor es el correcto
+        post = run_query('SELECT usuario_id FROM comunidad_posts WHERE id = ?', (post_id,), fetchone=True)
+        if not post:
+            return jsonify({'estado': 'error', 'mensaje': 'Post no encontrado.'}), 404
+            
+        if post[0] != usuario_id:
+            # Check if admin
+            rol = run_query('SELECT rol FROM usuarios WHERE id = ?', (usuario_id,), fetchone=True)
+            if not rol or rol[0] != 'admin':
+                return jsonify({'estado': 'error', 'mensaje': 'No tienes permiso para eliminar este post.'}), 403
+                
+        # Eliminar el post (en MySQL las FKs con CASCADE borrarán likes y comments)
+        # En SQLite a menos que PRAGMA foreign_keys = ON, debemos borrarlos manualmente
+        from app.auth import USE_MYSQL
+        if not USE_MYSQL:
+            run_query('DELETE FROM comunidad_likes WHERE post_id = ?', (post_id,), commit=True)
+            run_query('DELETE FROM comunidad_comentarios WHERE post_id = ?', (post_id,), commit=True)
+            
+        run_query('DELETE FROM comunidad_posts WHERE id = ?', (post_id,), commit=True)
+        
+        from app import socketio
+        socketio.emit('actualizar_comunidad')
+        return jsonify({'estado': 'exito', 'mensaje': 'Post eliminado.'})
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': str(e)})
