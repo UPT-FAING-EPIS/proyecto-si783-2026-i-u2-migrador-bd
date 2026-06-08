@@ -1057,18 +1057,13 @@ def ejecutar_migracion():
     _registrar_log(f'Migrando {total} tablas (Excluidas: {len(excluidas)})...')
 
     if total == 0:
-        try:
-            estado_app['proceso_activo'] = False
-            _registrar_log('No hay tablas para migrar', 'warning')
-            socketio.emit('progreso', {
-                'porcentaje': 100,
-                'tabla': '',
-                'estado': 'No hay tablas para migrar',
-                'metricas': estado_app['metricas']
-            }, skip_sid=None)
-            socketio.emit('migracion_completada', estado_app['metricas'], skip_sid=None)
-        finally:
-            return
+        _registrar_log('No hay tablas para migrar, pero se procesarán otros objetos (vistas, triggers, etc.)', 'warning')
+        socketio.emit('progreso', {
+            'porcentaje': 50,
+            'tabla': '',
+            'estado': 'Procesando otros objetos...',
+            'metricas': estado_app['metricas']
+        }, skip_sid=None)
 
     try:
         for idx, tabla in enumerate(tablas):
@@ -1694,16 +1689,20 @@ def api_obtener_posts():
     """Obtiene los posts de la comunidad con datos del autor."""
     try:
         from app.auth import run_query
-        # Traer posts ordenados por fecha descendente
+        usuario_id = session.get('usuario_id')
+        # Traer posts ordenados por fecha descendente con métricas sociales
         query = '''
             SELECT p.id, p.titulo, p.contenido, p.tipo, p.creado_en, 
-                   u.usuario, u.foto_perfil 
+                   u.id, u.usuario, u.foto_perfil,
+                   (SELECT COUNT(*) FROM comunidad_likes WHERE post_id = p.id),
+                   (SELECT COUNT(*) FROM comunidad_comentarios WHERE post_id = p.id),
+                   (SELECT COUNT(*) FROM comunidad_likes WHERE post_id = p.id AND usuario_id = ?)
             FROM comunidad_posts p
             JOIN usuarios u ON p.usuario_id = u.id
             ORDER BY p.creado_en DESC
             LIMIT 50
         '''
-        res = run_query(query, fetchall=True)
+        res = run_query(query, (usuario_id,), fetchall=True)
         posts = []
         if res:
             for row in res:
@@ -1713,8 +1712,12 @@ def api_obtener_posts():
                     'contenido': row[2],
                     'tipo': row[3],
                     'creado_en': row[4],
-                    'autor': row[5],
-                    'foto_perfil': row[6] or 'https://ui-avatars.com/api/?name=' + row[5] + '&background=random'
+                    'autor_id': row[5],
+                    'autor': row[6],
+                    'foto_perfil': row[7] or 'https://ui-avatars.com/api/?name=' + row[6] + '&background=random',
+                    'likes': row[8],
+                    'comentarios': row[9],
+                    'liked': bool(row[10])
                 })
         return jsonify({'estado': 'exito', 'posts': posts})
     except Exception as e:
@@ -1743,5 +1746,118 @@ def api_crear_post():
             VALUES (?, ?, ?, ?)
         ''', (usuario_id, titulo, contenido, tipo), commit=True)
         return jsonify({'estado': 'exito', 'mensaje': 'Post creado correctamente.'})
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': str(e)})
+
+@principal.route('/api/comunidad/posts/<int:post_id>/like', methods=['POST'])
+@requerir_login
+def api_toggle_like(post_id):
+    """Agrega o quita el like de un post para el usuario actual."""
+    usuario_id = session.get('usuario_id')
+    try:
+        from app.auth import run_query
+        # Verificar si ya existe
+        existe = run_query('SELECT id FROM comunidad_likes WHERE post_id = ? AND usuario_id = ?', (post_id, usuario_id), fetchone=True)
+        if existe:
+            run_query('DELETE FROM comunidad_likes WHERE post_id = ? AND usuario_id = ?', (post_id, usuario_id), commit=True)
+            return jsonify({'estado': 'exito', 'accion': 'unliked'})
+        else:
+            run_query('INSERT INTO comunidad_likes (post_id, usuario_id) VALUES (?, ?)', (post_id, usuario_id), commit=True)
+            return jsonify({'estado': 'exito', 'accion': 'liked'})
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': str(e)})
+
+@principal.route('/api/comunidad/posts/<int:post_id>/comentarios', methods=['GET', 'POST'])
+@requerir_login
+def api_comentarios(post_id):
+    """Obtiene o agrega comentarios a un post."""
+    from app.auth import run_query
+    usuario_id = session.get('usuario_id')
+    
+    if request.method == 'POST':
+        datos = request.json or {}
+        contenido = datos.get('contenido', '').strip()
+        if not contenido:
+            return jsonify({'estado': 'error', 'mensaje': 'El comentario no puede estar vacío.'})
+        try:
+            run_query('''
+                INSERT INTO comunidad_comentarios (post_id, usuario_id, contenido)
+                VALUES (?, ?, ?)
+            ''', (post_id, usuario_id, contenido), commit=True)
+            return jsonify({'estado': 'exito', 'mensaje': 'Comentario agregado.'})
+        except Exception as e:
+            return jsonify({'estado': 'error', 'mensaje': str(e)})
+            
+    else:
+        try:
+            query = '''
+                SELECT c.id, c.contenido, c.creado_en, u.id, u.usuario, u.foto_perfil
+                FROM comunidad_comentarios c
+                JOIN usuarios u ON c.usuario_id = u.id
+                WHERE c.post_id = ?
+                ORDER BY c.creado_en ASC
+            '''
+            res = run_query(query, (post_id,), fetchall=True)
+            comentarios = []
+            if res:
+                for row in res:
+                    comentarios.append({
+                        'id': row[0],
+                        'contenido': row[1],
+                        'creado_en': row[2],
+                        'autor_id': row[3],
+                        'autor': row[4],
+                        'foto_perfil': row[5] or 'https://ui-avatars.com/api/?name=' + row[4] + '&background=random'
+                    })
+            return jsonify({'estado': 'exito', 'comentarios': comentarios})
+        except Exception as e:
+            return jsonify({'estado': 'error', 'mensaje': str(e)})
+
+@principal.route('/api/usuarios/<int:target_id>/perfil', methods=['GET'])
+@requerir_login
+def api_obtener_perfil(target_id):
+    """Obtiene el perfil de un usuario y si lo sigo."""
+    usuario_id = session.get('usuario_id')
+    try:
+        from app.auth import run_query
+        user_res = run_query('SELECT id, usuario, descripcion, foto_perfil FROM usuarios WHERE id = ?', (target_id,), fetchone=True)
+        if not user_res:
+            return jsonify({'estado': 'error', 'mensaje': 'Usuario no encontrado'})
+            
+        seguidores = run_query('SELECT COUNT(*) FROM comunidad_seguidores WHERE seguido_id = ?', (target_id,), fetchone=True)[0]
+        seguidos = run_query('SELECT COUNT(*) FROM comunidad_seguidores WHERE seguidor_id = ?', (target_id,), fetchone=True)[0]
+        lo_sigo = bool(run_query('SELECT id FROM comunidad_seguidores WHERE seguidor_id = ? AND seguido_id = ?', (usuario_id, target_id), fetchone=True))
+        
+        perfil = {
+            'id': user_res[0],
+            'usuario': user_res[1],
+            'descripcion': user_res[2] or 'Sin descripción.',
+            'foto_perfil': user_res[3] or 'https://ui-avatars.com/api/?name=' + user_res[1] + '&background=random',
+            'seguidores': seguidores,
+            'seguidos': seguidos,
+            'lo_sigo': lo_sigo,
+            'es_mi_perfil': usuario_id == target_id
+        }
+        return jsonify({'estado': 'exito', 'perfil': perfil})
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': str(e)})
+
+@principal.route('/api/usuarios/<int:target_id>/seguir', methods=['POST'])
+@requerir_login
+def api_toggle_seguir(target_id):
+    """Permite seguir o dejar de seguir a un usuario."""
+    usuario_id = session.get('usuario_id')
+    if usuario_id == target_id:
+        return jsonify({'estado': 'error', 'mensaje': 'No puedes seguirte a ti mismo'})
+        
+    try:
+        from app.auth import run_query
+        existe = run_query('SELECT id FROM comunidad_seguidores WHERE seguidor_id = ? AND seguido_id = ?', (usuario_id, target_id), fetchone=True)
+        if existe:
+            run_query('DELETE FROM comunidad_seguidores WHERE seguidor_id = ? AND seguido_id = ?', (usuario_id, target_id), commit=True)
+            return jsonify({'estado': 'exito', 'accion': 'unfollowed'})
+        else:
+            run_query('INSERT INTO comunidad_seguidores (seguidor_id, seguido_id) VALUES (?, ?)', (usuario_id, target_id), commit=True)
+            return jsonify({'estado': 'exito', 'accion': 'followed'})
     except Exception as e:
         return jsonify({'estado': 'error', 'mensaje': str(e)})

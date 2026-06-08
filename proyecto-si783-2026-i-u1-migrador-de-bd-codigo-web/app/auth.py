@@ -124,6 +124,39 @@ def inicializar_bd():
                             FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
                         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                     ''', commit=True)
+                    run_query('''
+                        CREATE TABLE IF NOT EXISTS comunidad_likes (
+                            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                            post_id INT NOT NULL,
+                            usuario_id INT NOT NULL,
+                            creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (post_id) REFERENCES comunidad_posts(id) ON DELETE CASCADE,
+                            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                            UNIQUE(post_id, usuario_id)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    ''', commit=True)
+                    run_query('''
+                        CREATE TABLE IF NOT EXISTS comunidad_comentarios (
+                            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                            post_id INT NOT NULL,
+                            usuario_id INT NOT NULL,
+                            contenido TEXT NOT NULL,
+                            creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (post_id) REFERENCES comunidad_posts(id) ON DELETE CASCADE,
+                            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    ''', commit=True)
+                    run_query('''
+                        CREATE TABLE IF NOT EXISTS comunidad_seguidores (
+                            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                            seguidor_id INT NOT NULL,
+                            seguido_id INT NOT NULL,
+                            creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (seguidor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                            FOREIGN KEY (seguido_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                            UNIQUE(seguidor_id, seguido_id)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    ''', commit=True)
                 except Exception as e:
                     print(f"Error creando comunidad_posts: {e}")
         except Exception:
@@ -166,6 +199,39 @@ def inicializar_bd():
                         tipo VARCHAR(50) NOT NULL,
                         creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                ''', commit=True)
+                run_query('''
+                    CREATE TABLE IF NOT EXISTS comunidad_likes (
+                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        post_id INT NOT NULL,
+                        usuario_id INT NOT NULL,
+                        creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (post_id) REFERENCES comunidad_posts(id) ON DELETE CASCADE,
+                        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                        UNIQUE(post_id, usuario_id)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                ''', commit=True)
+                run_query('''
+                    CREATE TABLE IF NOT EXISTS comunidad_comentarios (
+                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        post_id INT NOT NULL,
+                        usuario_id INT NOT NULL,
+                        contenido TEXT NOT NULL,
+                        creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (post_id) REFERENCES comunidad_posts(id) ON DELETE CASCADE,
+                        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                ''', commit=True)
+                run_query('''
+                    CREATE TABLE IF NOT EXISTS comunidad_seguidores (
+                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        seguidor_id INT NOT NULL,
+                        seguido_id INT NOT NULL,
+                        creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (seguidor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                        FOREIGN KEY (seguido_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                        UNIQUE(seguidor_id, seguido_id)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 ''', commit=True)
             except Exception:
@@ -236,6 +302,41 @@ def inicializar_bd():
                 tipo TEXT NOT NULL,
                 creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+            )
+        ''')
+
+        # Crear tablas sociales (likes, comentarios, seguidores) si no existen
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS comunidad_likes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER NOT NULL,
+                usuario_id INTEGER NOT NULL,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (post_id) REFERENCES comunidad_posts(id),
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+                UNIQUE(post_id, usuario_id)
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS comunidad_comentarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER NOT NULL,
+                usuario_id INTEGER NOT NULL,
+                contenido TEXT NOT NULL,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (post_id) REFERENCES comunidad_posts(id),
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS comunidad_seguidores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                seguidor_id INTEGER NOT NULL,
+                seguido_id INTEGER NOT NULL,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (seguidor_id) REFERENCES usuarios(id),
+                FOREIGN KEY (seguido_id) REFERENCES usuarios(id),
+                UNIQUE(seguidor_id, seguido_id)
             )
         ''')
         conn.commit()
