@@ -214,14 +214,13 @@ def oauth_login(proveedor):
         redirect_uri = url_for('principal.oauth_callback', proveedor='github', _external=True)
         return oauth.github.authorize_redirect(redirect_uri)
 
-@principal.route('/auth/github/desconectar')
-def oauth_github_desconectar():
+@principal.route('/api/github/desconectar', methods=['POST'])
+@requerir_login
+def api_github_desconectar():
     """Desconecta la cuenta de GitHub."""
     session.pop('github_access_token', None)
     session.pop('github_token_type', None)
-    return redirect(url_for('principal.index'))
-
-    return redirect(url_for('principal.login'))
+    return jsonify({'estado': 'exito'})
 
 @principal.route('/auth/<proveedor>/callback')
 def oauth_callback(proveedor):
@@ -274,6 +273,9 @@ def oauth_callback(proveedor):
             token = oauth.github.authorize_access_token()
             session['github_access_token'] = token.get('access_token')
             session['github_token_type'] = token.get('token_type', 'bearer')
+
+            if action == 'connect':
+                return "<script>window.close();</script>"
 
             # Obtener información del usuario de GitHub
             resp = oauth.github.get('user', token=token)
@@ -381,6 +383,62 @@ def api_github_repos():
         return jsonify({'estado': 'exito', 'repos': repos})
     except Exception as e:
         return jsonify({'estado': 'error', 'mensaje': f'No se pudieron listar repositorios: {str(e)}'}), 500
+
+
+@principal.route('/api/github/ramas', methods=['GET'])
+@requerir_login
+def api_github_ramas():
+    """Obtiene las ramas de un repositorio de GitHub."""
+    headers = _github_headers()
+    if not headers:
+        return jsonify({'estado': 'error', 'mensaje': 'Conecta tu cuenta de GitHub primero'}), 401
+
+    repo = request.args.get('repo')
+    if not repo:
+        return jsonify({'estado': 'error', 'mensaje': 'Falta el repositorio'}), 400
+
+    try:
+        url = f'https://api.github.com/repos/{repo}/branches?per_page=100'
+        respuesta = requests.get(url, headers=headers, timeout=20)
+        if respuesta.status_code != 200:
+            return jsonify({'estado': 'error', 'mensaje': f'GitHub respondió {respuesta.status_code}'}), 400
+
+        ramas = [{'name': b.get('name')} for b in respuesta.json()]
+        return jsonify({'estado': 'exito', 'ramas': ramas})
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': str(e)}), 500
+
+
+@principal.route('/api/github/commits', methods=['GET'])
+@requerir_login
+def api_github_commits():
+    """Obtiene los últimos commits de una rama en GitHub."""
+    headers = _github_headers()
+    if not headers:
+        return jsonify({'estado': 'error', 'mensaje': 'Conecta tu cuenta de GitHub primero'}), 401
+
+    repo = request.args.get('repo')
+    branch = request.args.get('branch', 'main')
+    if not repo:
+        return jsonify({'estado': 'error', 'mensaje': 'Falta el repositorio'}), 400
+
+    try:
+        url = f'https://api.github.com/repos/{repo}/commits?sha={branch}&per_page=5'
+        respuesta = requests.get(url, headers=headers, timeout=20)
+        if respuesta.status_code != 200:
+            return jsonify({'estado': 'error', 'mensaje': f'GitHub respondió {respuesta.status_code}'}), 400
+
+        commits = []
+        for c in respuesta.json():
+            commits.append({
+                'sha': c.get('sha')[:7] if c.get('sha') else '',
+                'mensaje': c.get('commit', {}).get('message', ''),
+                'fecha': c.get('commit', {}).get('author', {}).get('date', ''),
+                'url': c.get('html_url', '')
+            })
+        return jsonify({'estado': 'exito', 'commits': commits})
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': str(e)}), 500
 
 
 @principal.route('/api/github/crear-repo', methods=['POST'])
@@ -739,6 +797,139 @@ def _extension_para_motor(motor: str) -> str:
         return '.ndjson'
     return '.db'
 
+@principal.route('/api/cli/execute', methods=['POST'])
+@requerir_login
+def api_cli_execute():
+    datos = request.json or {}
+    comando_str = datos.get('command', '').strip()
+    if not comando_str:
+        return jsonify({'html': ''})
+    
+    args = comando_str.split()
+    cmd = args[0].lower()
+    
+    _registrar_actividad_ip(f'CLI: {comando_str}')
+    
+    if cmd == 'help':
+        html = """
+        <div style="color: #60a5fa; font-weight: bold; margin-bottom: 5px;">Comandos Disponibles:</div>
+        <div style="display: grid; grid-template-columns: 220px 1fr; gap: 5px; margin-bottom: 10px;">
+            <span class="color-yellow">help</span><span class="color-gray">Muestra este mensaje de ayuda.</span>
+            <span class="color-yellow">ls uploads</span><span class="color-gray">Lista los archivos disponibles en tu carpeta local.</span>
+            <span class="color-yellow">load origin &lt;archivo&gt;</span><span class="color-gray">Carga un archivo de origen en memoria.</span>
+            <span class="color-yellow">connect dest &lt;motor&gt;</span><span class="color-gray">Conecta el destino (ej. mysql, postgres).</span>
+            <span class="color-yellow">status</span><span class="color-gray">Muestra el estado actual de las conexiones y tablas.</span>
+            <span class="color-yellow">migrate</span><span class="color-gray">Inicia la migración de datos al destino de forma asíncrona.</span>
+            <span class="color-yellow">clear</span><span class="color-gray">Limpia la terminal.</span>
+        </div>
+        """
+        return jsonify({'html': html})
+
+    elif cmd == 'ls':
+        if len(args) > 1 and args[1].lower() == 'uploads':
+            carpeta_usuario = _carpeta_upload_usuario()
+            archivos = os.listdir(carpeta_usuario)
+            if not archivos:
+                return jsonify({'html': '<span class="color-gray">No hay archivos en la carpeta uploads.</span>'})
+            html = '<div style="display: flex; flex-wrap: wrap; gap: 15px;">'
+            for f in archivos:
+                color = "color-blue" if f.endswith('.sql') or f.endswith('.bak') else "color-gray"
+                html += f'<span class="{color}">{f}</span>'
+            html += '</div>'
+            return jsonify({'html': html})
+        else:
+            return jsonify({'html': '<span class="color-red">Comando ls requiere un argumento (ej: ls uploads).</span>'})
+
+    elif cmd == 'load' and len(args) > 1 and args[1].lower() == 'origin':
+        if len(args) < 3:
+            return jsonify({'html': '<span class="color-red">Debes especificar el nombre del archivo.</span>'})
+        archivo = args[2]
+        ruta = os.path.join(_carpeta_upload_usuario(), secure_filename(archivo))
+        if not os.path.exists(ruta):
+            return jsonify({'html': f'<span class="color-red">Archivo no encontrado: {archivo}</span>'})
+        
+        tipo, msg, _ = DetectorBaseDatos.detectar(ruta, archivo)
+        if tipo == 'Desconocido' or tipo == 'SQL Server Backup':
+            return jsonify({'html': f'<span class="color-red">No se pudo cargar: {msg}</span>'})
+        
+        try:
+            origen = ConectorOrigen(ruta, tipo)
+            if not origen.tablas:
+                return jsonify({'html': '<span class="color-red">El archivo no contiene tablas.</span>'})
+            estado_app['origen'] = origen
+            html = f'<span class="color-green">Origen cargado exitosamente: {len(origen.tablas)} tablas detectadas ({tipo}).</span>'
+            return jsonify({'html': html})
+        except Exception as e:
+            return jsonify({'html': f'<span class="color-red">Error cargando origen: {str(e)}</span>'})
+
+    elif cmd == 'connect' and len(args) > 1 and args[1].lower() == 'dest':
+        if len(args) < 3:
+            return jsonify({'html': '<span class="color-red">Debes especificar el motor (ej: MySQL, PostgreSQL, MongoDB, Cassandra).</span>'})
+        motor = " ".join(args[2:]).strip()
+        
+        motores_validos = ["MySQL", "PostgreSQL", "SQL Server", "Oracle", "MongoDB", "Cassandra", "Elasticsearch", "Redis", "SQLite"]
+        motor_formateado = next((m for m in motores_validos if m.lower() == motor.lower()), None)
+        
+        if not motor_formateado:
+            return jsonify({'html': f'<span class="color-red">Motor no soportado. Usa uno de: {", ".join(motores_validos)}</span>'})
+        
+        try:
+            estado_app['destino'] = CargadorDestino(motor=motor_formateado)
+            return jsonify({'html': f'<span class="color-green">Destino conectado exitosamente en modo: {motor_formateado}.</span>'})
+        except Exception as e:
+            return jsonify({'html': f'<span class="color-red">Error conectando destino: {str(e)}</span>'})
+
+    elif cmd == 'status':
+        origen = estado_app.get('origen')
+        destino = estado_app.get('destino')
+        
+        html = '<div style="margin-bottom: 10px;">'
+        if origen:
+            html += f'<div style="margin-bottom: 5px;"><span class="color-blue font-bold">Origen:</span> <span class="color-green">Cargado ({len(origen.tablas)} tablas, {origen.motor})</span></div>'
+        else:
+            html += '<div style="margin-bottom: 5px;"><span class="color-blue font-bold">Origen:</span> <span class="color-red">No cargado</span></div>'
+            
+        if destino:
+            html += f'<div><span class="color-blue font-bold">Destino:</span> <span class="color-green">Conectado ({destino.motor})</span></div>'
+        else:
+            html += '<div><span class="color-blue font-bold">Destino:</span> <span class="color-red">No conectado</span></div>'
+        html += '</div>'
+        
+        if origen:
+            html += '<div style="color: #60a5fa; font-weight: bold; margin-bottom: 5px;">Tablas en Origen:</div>'
+            html += '<table style="width: 100%; max-width: 500px; border-collapse: collapse; font-size: 13px; margin-bottom: 10px; border: 1px solid #334155;">'
+            html += '<tr style="border-bottom: 1px solid #334155; background: #1e293b; color: #94a3b8;"><th style="text-align: left; padding: 6px;">Tabla</th><th style="text-align: left; padding: 6px;">Registros</th></tr>'
+            for t in origen.tablas[:10]:
+                html += f'<tr style="border-bottom: 1px solid #1e293b;"><td style="padding: 6px; border-right: 1px solid #334155;">{t["nombre"]}</td><td style="padding: 6px;">{t["registros"]}</td></tr>'
+            if len(origen.tablas) > 10:
+                html += f'<tr><td colspan="2" style="padding: 6px; color: #94a3b8; text-align:center;">...y {len(origen.tablas) - 10} más</td></tr>'
+            html += '</table>'
+            
+        return jsonify({'html': html})
+
+    elif cmd == 'migrate':
+        if not estado_app.get('origen') or not estado_app.get('destino'):
+            return jsonify({'html': '<span class="color-red">Debe conectar un origen y un destino primero. Use `load origin` y `connect dest`.</span>'})
+        if estado_app.get('proceso_activo'):
+            return jsonify({'html': '<span class="color-yellow">Ya hay una migración en progreso.</span>'})
+        
+        estado_app['proceso_activo'] = True
+        estado_app['simulacion'] = False
+        estado_app['metricas'] = {'extraidos': 0, 'cargados': 0, 'errores': 0, 'tablas_ok': 0}
+        estado_app['_ip_migracion'] = request.remote_addr or 'desconocida'
+        
+        socketio.start_background_task(ejecutar_migracion)
+        
+        html = """
+        <div class="color-green" style="margin-bottom: 5px;">[✓] Migración iniciada en segundo plano.</div>
+        <div class="color-gray">El progreso se mostrará automáticamente en la consola de Migración de la interfaz gráfica. Puedes revisar las métricas en tiempo real.</div>
+        """
+        return jsonify({'html': html})
+
+    else:
+        return jsonify({'html': f'<span class="color-red">Comando no reconocido: {cmd}. Escribe "help" para ver los comandos.</span>'})
+
+
 @principal.route('/api/subir-archivo', methods=['POST'])
 @requerir_login
 def api_subir_archivo():
@@ -831,6 +1022,87 @@ def api_subir_archivo():
         # Registrar y devolver siempre JSON (evitar páginas HTML o trazas)
         _registrar_log(f'Error al cargar "{nombre}": {str(e)}', 'error', ip)
         return jsonify({'estado': 'error', 'mensaje': f'Error procesando archivo: {str(e)}'})
+
+@principal.route('/api/comparar-esquemas', methods=['POST'])
+@requerir_login
+def api_comparar_esquemas():
+    _registrar_actividad_ip('Comparar esquemas')
+    if 'origen' not in estado_app:
+        return jsonify({'estado': 'error', 'mensaje': 'Primero debe subir el archivo origen.'})
+        
+    if 'archivo' not in request.files:
+        return jsonify({'estado': 'error', 'mensaje': 'No se subio archivo de destino'})
+
+    archivo = request.files['archivo']
+    if archivo.filename == '':
+        return jsonify({'estado': 'error', 'mensaje': 'Archivo vacio'})
+
+    nombre = secure_filename(archivo.filename)
+    carpeta_usuario = _carpeta_upload_usuario()
+    ruta = os.path.join(carpeta_usuario, nombre)
+    ip = request.remote_addr or 'desconocida'
+
+    try:
+        archivo.save(ruta)
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': f'No se pudo guardar: {str(e)}'})
+
+    try:
+        tipo, mensaje, _ = DetectorBaseDatos.detectar(ruta, nombre)
+        if tipo == 'Desconocido':
+            return jsonify({'estado': 'error', 'mensaje': f'Archivo destino no válido: {mensaje}'})
+            
+        destino = ConectorOrigen(ruta, tipo)
+        
+        # Comparar estado_app['origen'].esquema vs destino.esquema
+        origen = estado_app['origen']
+        tablas_origen = set(origen.esquema.keys())
+        tablas_destino = set(destino.esquema.keys())
+        
+        nuevas = list(tablas_origen - tablas_destino)
+        faltantes = list(tablas_destino - tablas_origen)
+        comunes = list(tablas_origen & tablas_destino)
+        
+        columnas_modificadas = []
+        for t in comunes:
+            cols_origen = {c['nombre'].lower(): c for c in origen.esquema[t].get('columnas', [])}
+            cols_destino = {c['nombre'].lower(): c for c in destino.esquema[t].get('columnas', [])}
+            
+            nombres_ori = set(cols_origen.keys())
+            nombres_des = set(cols_destino.keys())
+            
+            cols_nuevas = list(nombres_ori - nombres_des)
+            cols_faltantes = list(nombres_des - nombres_ori)
+            cols_comunes = list(nombres_ori & nombres_des)
+            
+            diff_tipos = []
+            for c in cols_comunes:
+                # Basic comparison
+                t_ori = cols_origen[c].get('tipo', '').upper()
+                t_des = cols_destino[c].get('tipo', '').upper()
+                # Relaxed matching could be done, but for now exact or substring
+                if t_ori != t_des and t_ori not in t_des and t_des not in t_ori:
+                    diff_tipos.append({'columna': cols_origen[c]['nombre'], 'origen': t_ori, 'destino': t_des})
+                    
+            if cols_nuevas or cols_faltantes or diff_tipos:
+                columnas_modificadas.append({
+                    'tabla': t,
+                    'nuevas': [cols_origen[c]['nombre'] for c in cols_nuevas],
+                    'faltantes': [cols_destino[c]['nombre'] for c in cols_faltantes],
+                    'tipos_diferentes': diff_tipos
+                })
+                
+        return jsonify({
+            'estado': 'exito',
+            'diferencias': {
+                'tablas_nuevas': nuevas,
+                'tablas_faltantes': faltantes,
+                'columnas_modificadas': columnas_modificadas
+            }
+        })
+    except Exception as e:
+        return jsonify({'estado': 'error', 'mensaje': f'Error comparando: {str(e)}'})
+
 
 @principal.route('/api/excluir-tablas', methods=['POST'])
 @requerir_login
@@ -1489,6 +1761,7 @@ def actualizar_perfil():
     
     usuario_id = session.get('usuario_id')
     descripcion = request.form.get('descripcion', '').strip()
+    github_url = request.form.get('github_url', '').strip()
     
     # Limitar descripción a 500 caracteres
     if len(descripcion) > 500:
@@ -1512,7 +1785,7 @@ def actualizar_perfil():
                     foto_perfil = f'data:{mime_type};base64,{foto_perfil}'
     
     # Actualizar perfil
-    exito, mensaje = actualizar_perfil_usuario(usuario_id, foto_perfil, descripcion)
+    exito, mensaje = actualizar_perfil_usuario(usuario_id, foto_perfil, descripcion, github_url=github_url if github_url else None)
     
     if exito:
         perfil_actualizado = obtener_perfil_usuario(usuario_id)
@@ -1539,139 +1812,7 @@ def actualizar_perfil():
 def cli_page():
     return render_template('cli.html')
 
-@principal.route('/api/cli/execute', methods=['POST'])
-@requerir_login
-def api_cli_execute():
-    datos = request.json or {}
-    command_str = datos.get('command', '').strip()
-    if not command_str:
-        return jsonify({'lines': []})
-        
-    args = command_str.split()
-    cmd = args[0].lower()
-    
-    if cmd == 'help':
-        return jsonify({'html': '''
-            <div class="color-blue font-bold">Comandos disponibles:</div>
-            <div><span class="color-yellow">help</span> - Muestra esta ayuda</div>
-            <div><span class="color-yellow">status</span> - Muestra el estado actual de la migración</div>
-            <div><span class="color-yellow">ls</span> - Lista los archivos disponibles para migrar</div>
-            <div><span class="color-yellow">set-source &lt;archivo&gt;</span> - Configura el archivo de origen</div>
-            <div><span class="color-yellow">set-target &lt;motor&gt;</span> - Configura el motor destino</div>
-            <div><span class="color-yellow">migrate</span> - Inicia la migración de datos, vistas, triggers, etc.</div>
-            <div><span class="color-yellow">clear</span> - Limpia la terminal</div>
-        '''})
-        
-    elif cmd == 'status':
-        origen = estado_app.get('origen')
-        destino = estado_app.get('destino')
-        o_txt = origen.ruta if origen else 'No configurado'
-        d_txt = destino.motor if destino else 'No configurado'
-        return jsonify({'html': f'''
-            <div>Origen actual: <span class="color-green">{o_txt}</span></div>
-            <div>Destino actual: <span class="color-green">{d_txt}</span></div>
-        '''})
-        
-    elif cmd == 'ls':
-        carpeta_usuario = _carpeta_upload_usuario()
-        try:
-            archivos = os.listdir(carpeta_usuario)
-            if not archivos:
-                return jsonify({'html': '<span class="color-gray">No hay archivos en tu carpeta. Usa la interfaz gráfica para subir un archivo.</span>'})
-            
-            html = '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">'
-            for arch in archivos:
-                html += f'<div class="color-blue">{arch}</div>'
-            html += '</div>'
-            return jsonify({'html': html})
-        except Exception as e:
-            return jsonify({'html': f'<span class="color-red">Error al listar: {str(e)}</span>'})
-            
-    elif cmd == 'set-source':
-        if len(args) < 2:
-            return jsonify({'html': '<span class="color-red">Uso: set-source &lt;archivo&gt;</span>'})
-        archivo = args[1]
-        carpeta_usuario = _carpeta_upload_usuario()
-        ruta = os.path.join(carpeta_usuario, secure_filename(archivo))
-        
-        if not os.path.exists(ruta):
-            return jsonify({'html': f'<span class="color-red">Error: el archivo {archivo} no existe. Usa "ls" para ver opciones.</span>'})
-            
-        try:
-            tipo, mensaje, _ = DetectorBaseDatos.detectar(ruta, archivo)
-            if tipo == 'Desconocido':
-                return jsonify({'html': f'<span class="color-red">Archivo no soportado: {mensaje}</span>'})
-                
-            origen = ConectorOrigen(ruta, tipo)
-            origen.mensaje_deteccion = mensaje
-            if not origen.tablas and not getattr(origen, 'vistas', []):
-                return jsonify({'html': '<span class="color-red">El archivo no contiene tablas ni objetos soportados.</span>'})
-                
-            estado_app['origen'] = origen
-            return jsonify({'html': f'''
-                <span class="color-green">Origen configurado con éxito.</span><br>
-                Motor detectado: <span class="color-yellow">{tipo}</span><br>
-                Tablas base detectadas: {len(origen.tablas)}
-            '''})
-        except Exception as e:
-            return jsonify({'html': f'<span class="color-red">Error cargando origen: {str(e)}</span>'})
-            
-    elif cmd == 'set-target':
-        if len(args) < 2:
-            return jsonify({'html': '<span class="color-red">Uso: set-target &lt;motor&gt;</span>'})
-        motor = ' '.join(args[1:])
-        motores_validos = [
-            'SQLite', 'PostgreSQL', 'MySQL', 'MariaDB', 'Microsoft SQL Server', 'Oracle',
-            'Snowflake', 'Amazon Redshift', 'Azure SQL Database', 'IBM Db2', 'Google BigQuery',
-            'MongoDB', 'Elasticsearch', 'Redis', 'Apache Cassandra', 'MongoDB Atlas'
-        ]
-        
-        motor_encontrado = None
-        for m in motores_validos:
-            if m.lower() == motor.lower() or m.lower().startswith(motor.lower()):
-                motor_encontrado = m
-                break
-                
-        if not motor_encontrado:
-            return jsonify({'html': f'<span class="color-red">Motor no válido.</span> Opciones: {", ".join(motores_validos)}'})
-            
-        try:
-            destino = CargadorDestino(motor_encontrado)
-            estado_app['destino'] = destino
-            
-            if estado_app['origen'] and estado_app['origen'].esquema:
-                if hasattr(estado_app['origen'], 'tabla_a_esquema'):
-                    destino.tabla_a_esquema = estado_app['origen'].tabla_a_esquema
-                if hasattr(estado_app['origen'], 'esquemas'):
-                    destino.crear_esquemas(estado_app['origen'].esquemas)
-                destino.crear_estructura(estado_app['origen'].esquema, tabla_a_esquema=destino.tabla_a_esquema)
-                
-            return jsonify({'html': f'<span class="color-green">Destino configurado como {motor_encontrado}. Estructuras SQL creadas. Escribe "migrate" para iniciar.</span>'})
-        except Exception as e:
-            return jsonify({'html': f'<span class="color-red">Error configurando destino: {str(e)}</span>'})
-            
-    elif cmd == 'migrate':
-        if not estado_app['origen']:
-            return jsonify({'html': '<span class="color-red">Error: origen no configurado. Usa set-source.</span>'})
-        if not estado_app['destino']:
-            return jsonify({'html': '<span class="color-red">Error: destino no configurado. Usa set-target.</span>'})
-        if estado_app['proceso_activo']:
-            return jsonify({'html': '<span class="color-yellow">Ya hay una migración en curso. Verifica la barra superior.</span>'})
-            
-        estado_app['proceso_activo'] = True
-        estado_app['metricas'] = {'extraidos': 0, 'cargados': 0, 'errores': 0, 'tablas_ok': 0}
-        estado_app['_ip_migracion'] = request.remote_addr or 'desconocida'
-        socketio.start_background_task(ejecutar_migracion)
-        
-        return jsonify({'html': '''
-            <span class="color-green font-bold">[ OK ] Migración iniciada en segundo plano.</span><br>
-            <span class="color-gray">El sistema está procesando Tablas, Vistas, Triggers y Procedimientos.</span><br>
-            <span class="color-gray">Revisa "status" en unos segundos o visita la pestaña Historial para ver los resultados.</span>
-        '''})
-        
-    else:
-        cmd_safe = cmd.replace('<', '&lt;').replace('>', '&gt;')
-        return jsonify({'html': f'<span class="color-red">Comando no encontrado: {cmd_safe}</span>'})
+
 
 @socketio.on('conectar')
 def conectar():

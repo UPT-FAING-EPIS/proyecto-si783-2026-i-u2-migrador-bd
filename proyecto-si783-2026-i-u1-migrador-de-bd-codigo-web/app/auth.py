@@ -269,6 +269,8 @@ def inicializar_bd():
                 try:
                     run_query('CREATE INDEX idx_comunidad_likes_post ON comunidad_likes(post_id)', commit=True)
                     run_query('CREATE INDEX idx_comunidad_comentarios_post ON comunidad_comentarios(post_id)', commit=True)
+                    run_query('CREATE INDEX idx_comunidad_seguidores_seguido ON comunidad_seguidores(seguido_id)', commit=True)
+                    run_query('ALTER TABLE usuarios ADD COLUMN github_url VARCHAR(255)', commit=True)
                 except Exception:
                     pass
             except Exception:
@@ -385,7 +387,14 @@ def inicializar_bd():
         ''')
         c.execute('CREATE INDEX IF NOT EXISTS idx_comunidad_likes_post ON comunidad_likes(post_id)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_comunidad_comentarios_post ON comunidad_comentarios(post_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_comunidad_seguidores_seguido ON comunidad_seguidores(seguido_id)')
         
+        # Intentar añadir columna github si no existe en SQLite
+        try:
+            c.execute('ALTER TABLE usuarios ADD COLUMN github_url VARCHAR(255)')
+        except sqlite3.OperationalError:
+            pass
+            
         conn.commit()
         conn.close()
 
@@ -647,7 +656,7 @@ def obtener_perfil_usuario(usuario_id):
     """Obtiene el perfil completo del usuario incluyendo foto y descripción."""
     try:
         resultado = run_query(
-            'SELECT id, usuario, email, rol, foto_perfil, descripcion FROM usuarios WHERE id = ?',
+            'SELECT id, usuario, email, rol, foto_perfil, descripcion, github_url FROM usuarios WHERE id = ?',
             (usuario_id,),
             fetchone=True
         )
@@ -658,14 +667,15 @@ def obtener_perfil_usuario(usuario_id):
                 'email': resultado[2],
                 'rol': resultado[3],
                 'foto_perfil': resultado[4],
-                'descripcion': resultado[5]
+                'descripcion': resultado[5],
+                'github_url': resultado[6] if len(resultado) > 6 else None
             }
     except Exception:
         pass
     return None
 
-def actualizar_perfil_usuario(usuario_id, foto_perfil=None, descripcion=None):
-    """Actualiza la foto de perfil y/o descripción del usuario."""
+def actualizar_perfil_usuario(usuario_id, foto_perfil=None, descripcion=None, github_url=None):
+    """Actualiza la foto de perfil, descripción y github del usuario."""
     try:
         if foto_perfil is not None:
             run_query(
@@ -680,7 +690,14 @@ def actualizar_perfil_usuario(usuario_id, foto_perfil=None, descripcion=None):
                 (descripcion, usuario_id),
                 commit=True
             )
-        
+            
+        if github_url is not None:
+            run_query(
+                'UPDATE usuarios SET github_url = ? WHERE id = ?',
+                (github_url, usuario_id),
+                commit=True
+            )
+            
         return True, 'Perfil actualizado correctamente'
     except Exception as e:
         return False, str(e)

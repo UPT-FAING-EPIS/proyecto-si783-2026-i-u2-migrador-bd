@@ -146,8 +146,10 @@
     const terminalBody = document.getElementById('terminal-body');
     const promptText = "{{ session.usuario }}@migrador:~$";
     
-    let history = [];
-    let historyIndex = -1;
+    let history = JSON.parse(localStorage.getItem('cli_history') || '[]');
+    let historyIndex = history.length;
+    
+    const comandosComunes = ['help', 'ls uploads', 'load origin ', 'connect dest mysql', 'connect dest postgresql', 'connect dest sql server', 'connect dest mongodb', 'status', 'migrate', 'clear'];
 
     function enfocarInput() {
         input.focus();
@@ -166,7 +168,18 @@
     }
 
     input.addEventListener('keydown', async function(e) {
-        if (e.key === 'Enter') {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const current = input.value.toLowerCase();
+            if (!current) return;
+            const matches = comandosComunes.filter(c => c.startsWith(current));
+            if (matches.length === 1) {
+                input.value = matches[0];
+            } else if (matches.length > 1) {
+                addLineToOutput(`<span class="prompt">${promptText}</span> <span class="color-white">${escapeHtml(input.value)}</span>`);
+                addLineToOutput(`<span class="color-yellow">${matches.join('  ')}</span>`);
+            }
+        } else if (e.key === 'Enter') {
             const command = input.value.trim();
             
             // Add user command to output
@@ -176,6 +189,8 @@
             
             if (command) {
                 history.push(command);
+                if (history.length > 100) history.shift(); // Limitar historial
+                localStorage.setItem('cli_history', JSON.stringify(history));
                 historyIndex = history.length;
                 await procesarComando(command);
             }
