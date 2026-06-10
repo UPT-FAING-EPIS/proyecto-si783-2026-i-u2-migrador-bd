@@ -45,15 +45,68 @@ def _carpeta_upload_usuario() -> str:
     os.makedirs(ruta, exist_ok=True)
     return ruta
 
-estado_app = {
-    'origen': None,
-    'destino': None,
-    'proceso_activo': False,
-    'metricas': {'extraidos': 0, 'cargados': 0, 'errores': 0, 'tablas_ok': 0},
-    'historial': [],   # registros de migraciones completadas
-    'logs': [],        # log detallado de todas las acciones
-    'ips': [],         # registro de accesos por IP
-}
+from flask import session, has_request_context
+from threading import local
+
+thread_local = local()
+
+class EstadoProxy:
+    _global_ips = []
+    _global_logs = []
+
+    def __init__(self):
+        self._estados = {}
+
+    def _get_current_uid(self):
+        if hasattr(thread_local, 'usuario_id') and thread_local.usuario_id:
+            return thread_local.usuario_id
+        try:
+            if has_request_context():
+                return session.get('usuario_id', 'anonimo')
+        except Exception:
+            pass
+        return 'anonimo'
+
+    def get_estado(self):
+        uid = self._get_current_uid()
+        if uid not in self._estados:
+            self._estados[uid] = {
+                'origen': None,
+                'destino': None,
+                'proceso_activo': False,
+                'metricas': {'extraidos': 0, 'cargados': 0, 'errores': 0, 'tablas_ok': 0},
+                'historial': [],
+            }
+        return self._estados[uid]
+
+    def __getitem__(self, key):
+        if key == 'ips':
+            return self._global_ips
+        if key == 'logs':
+            return self._global_logs
+        return self.get_estado()[key]
+
+    def __setitem__(self, key, value):
+        if key == 'ips':
+            self._global_ips = value
+        elif key == 'logs':
+            self._global_logs = value
+        else:
+            self.get_estado()[key] = value
+
+    def __contains__(self, key):
+        if key in ['ips', 'logs']:
+            return True
+        return key in self.get_estado()
+
+    def get(self, key, default=None):
+        if key == 'ips':
+            return self._global_ips
+        if key == 'logs':
+            return self._global_logs
+        return self.get_estado().get(key, default)
+
+estado_app = EstadoProxy()
 
 def _registrar_log(mensaje: str, tipo: str = 'info', ip: str = None):
     """Agrega entrada al log detallado de la aplicacion."""
@@ -70,36 +123,8 @@ MAX_IPS = 1000  # limite para evitar crecimiento ilimitado de memoria
 
 def _registrar_ip(ip: str, actividad: str, usuario: str = None):
     """Registra acceso de una IP. Si ya existe, actualiza fecha/hora/actividad."""
-    ahora = datetime.now()
-    fecha = ahora.strftime('%Y-%m-%d')
-    hora = ahora.strftime('%H:%M:%S')
-    
-    # Buscar si esta IP ya existe
-    ip_existente = None
-    for entrada in estado_app['ips']:
-        if entrada['ip'] == ip:
-            ip_existente = entrada
-            break
-    
-    if ip_existente:
-        # Actualizar fecha, hora, actividad y usuario si cambia
-        ip_existente['fecha'] = fecha
-        ip_existente['hora'] = hora
-        ip_existente['actividad'] = actividad
-        ip_existente['usuario'] = usuario or ip_existente.get('usuario', 'anónimo')
-        ip_existente['accesos'] = ip_existente.get('accesos', 1) + 1
-    else:
-        # Nueva IP: agregar
-        if len(estado_app['ips']) >= MAX_IPS:
-            estado_app['ips'].pop(0)
-        estado_app['ips'].append({
-            'ip': ip,
-            'fecha': fecha,
-            'hora': hora,
-            'actividad': actividad,
-            'usuario': usuario or 'anónimo',
-            'accesos': 1
-        })
+    from app.local_state import registrar_ip_compartida
+    registrar_ip_compartida(ip, actividad, usuario)
 
 def _registrar_actividad_ip(actividad_desc: str):
     """Registra actividad real de una IP (no navegaciones)."""
@@ -760,7 +785,9 @@ def historial():
 @requerir_admin
 def monitoreo_ip():
     usuario_actual = obtener_usuario_actual()
-    return render_template('monitoreo_ip.html', ips=estado_app['ips'], usuario=usuario_actual)
+    from app.local_state import obtener_ips_compartidas
+    ips_globales = obtener_ips_compartidas()
+    return render_template('monitoreo_ip.html', ips=ips_globales, usuario=usuario_actual)
 
 
 # Ruta de compatibilidad: redirigir /reporte a /historial
@@ -917,8 +944,10 @@ def api_cli_execute():
         estado_app['simulacion'] = False
         estado_app['metricas'] = {'extraidos': 0, 'cargados': 0, 'errores': 0, 'tablas_ok': 0}
         estado_app['_ip_migracion'] = request.remote_addr or 'desconocida'
+        usuario_id = session.get('usuario_id', 'anonimo')
+        estado_app['_usuario_id'] = usuario_id
         
-        socketio.start_background_task(ejecutar_migracion)
+        socketio.start_background_task(ejecutar_migracion, usuario_id)
         
         html = """
         <div class="color-green" style="margin-bottom: 5px;">[✓] Migración iniciada en segundo plano.</div>
@@ -1304,13 +1333,17 @@ def api_iniciar_migracion():
     estado_app['simulacion'] = simulacion
     estado_app['metricas'] = {'extraidos': 0, 'cargados': 0, 'errores': 0, 'tablas_ok': 0}
     estado_app['_ip_migracion'] = ip  # Guardar IP para el background task
+    usuario_id = session.get('usuario_id', 'anonimo')
+    estado_app['_usuario_id'] = usuario_id
     
     _registrar_log(f'Iniciando {"simulación de " if simulacion else ""}migracion...', 'info', ip)
     
-    socketio.start_background_task(ejecutar_migracion)
+    socketio.start_background_task(ejecutar_migracion, usuario_id)
     return jsonify({'estado': 'exito'})
 
-def ejecutar_migracion():
+def ejecutar_migracion(usuario_id='anonimo'):
+    global thread_local
+    thread_local.usuario_id = usuario_id
     origen = estado_app.get('origen')
     destino = estado_app.get('destino')
     simulacion = estado_app.get('simulacion', False)
@@ -1801,7 +1834,8 @@ def actualizar_perfil():
         # Form submission
         if exito:
             _registrar_log(f'Usuario {session.get("usuario")} actualizó su perfil', 'info', request.remote_addr)
-            return redirect(url_for('principal.perfil'))
+            import time
+            return redirect(url_for('principal.perfil', t=int(time.time())))
         else:
             perfil_data = obtener_perfil_usuario(usuario_id)
             usuario_actual = obtener_usuario_actual()

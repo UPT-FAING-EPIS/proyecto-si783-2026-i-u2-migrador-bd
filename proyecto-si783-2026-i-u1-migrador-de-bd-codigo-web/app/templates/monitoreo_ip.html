@@ -32,7 +32,8 @@
     </div>
 
     <!-- Tabla de accesos -->
-    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px; min-width:700px;">
         <thead>
             <tr style="background:#f5f5f5;">
                 <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #e0e0e0;">#</th>
@@ -60,6 +61,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
     <p style="text-align:center; color:#999; padding:40px;">No hay registros de acceso todavía.</p>
     {% endif %}
@@ -72,7 +74,7 @@
 </div>
 
 <script>
-// Refrescar automáticamente cada 15 s
-setTimeout(() => location.reload(), 15000);
+// Refrescar automáticamente cada 3 s para mayor fluidez
+setTimeout(() => location.reload(), 3000);
 </script>
 {% endblock %}

@@ -183,6 +183,23 @@ def inicializar_bd():
                             UNIQUE(seguidor_id, seguido_id)
                         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                     ''', commit=True)
+                    run_query('''
+                        CREATE TABLE IF NOT EXISTS historial_migraciones (
+                            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                            usuario_id INT NOT NULL,
+                            fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            archivo_origen VARCHAR(500),
+                            motor_destino VARCHAR(100),
+                            tablas_ok INT DEFAULT 0,
+                            extraidos INT DEFAULT 0,
+                            cargados INT DEFAULT 0,
+                            errores INT DEFAULT 0,
+                            duracion_segundos FLOAT DEFAULT 0.0,
+                            total_tablas INT DEFAULT 0,
+                            ip VARCHAR(50),
+                            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    ''', commit=True)
                     try:
                         run_query('CREATE INDEX idx_comunidad_likes_post ON comunidad_likes(post_id)', commit=True)
                         run_query('CREATE INDEX idx_comunidad_comentarios_post ON comunidad_comentarios(post_id)', commit=True)
@@ -266,10 +283,41 @@ def inicializar_bd():
                         UNIQUE(seguidor_id, seguido_id)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 ''', commit=True)
+                run_query('''
+                    CREATE TABLE IF NOT EXISTS historial_migraciones (
+                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        usuario_id INT NOT NULL,
+                        fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        archivo_origen VARCHAR(500),
+                        motor_destino VARCHAR(100),
+                        tablas_ok INT DEFAULT 0,
+                        extraidos INT DEFAULT 0,
+                        cargados INT DEFAULT 0,
+                        errores INT DEFAULT 0,
+                        duracion_segundos FLOAT DEFAULT 0.0,
+                        total_tablas INT DEFAULT 0,
+                        ip VARCHAR(50),
+                        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                ''', commit=True)
                 try:
                     run_query('CREATE INDEX idx_comunidad_likes_post ON comunidad_likes(post_id)', commit=True)
                     run_query('CREATE INDEX idx_comunidad_comentarios_post ON comunidad_comentarios(post_id)', commit=True)
                     run_query('CREATE INDEX idx_comunidad_seguidores_seguido ON comunidad_seguidores(seguido_id)', commit=True)
+                except Exception:
+                    pass
+                    
+                try:
+                    run_query('ALTER TABLE usuarios ADD COLUMN foto_perfil LONGTEXT', commit=True)
+                except Exception:
+                    pass
+
+                try:
+                    run_query('ALTER TABLE usuarios ADD COLUMN descripcion VARCHAR(500)', commit=True)
+                except Exception:
+                    pass
+                    
+                try:
                     run_query('ALTER TABLE usuarios ADD COLUMN github_url VARCHAR(255)', commit=True)
                 except Exception:
                     pass
@@ -383,6 +431,23 @@ def inicializar_bd():
                 FOREIGN KEY (seguidor_id) REFERENCES usuarios(id),
                 FOREIGN KEY (seguido_id) REFERENCES usuarios(id),
                 UNIQUE(seguidor_id, seguido_id)
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS historial_migraciones (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id INTEGER NOT NULL,
+                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                archivo_origen TEXT,
+                motor_destino TEXT,
+                tablas_ok INTEGER DEFAULT 0,
+                extraidos INTEGER DEFAULT 0,
+                cargados INTEGER DEFAULT 0,
+                errores INTEGER DEFAULT 0,
+                duracion_segundos REAL DEFAULT 0.0,
+                total_tablas INTEGER DEFAULT 0,
+                ip TEXT,
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
             )
         ''')
         c.execute('CREATE INDEX IF NOT EXISTS idx_comunidad_likes_post ON comunidad_likes(post_id)')
@@ -670,8 +735,26 @@ def obtener_perfil_usuario(usuario_id):
                 'descripcion': resultado[5],
                 'github_url': resultado[6] if len(resultado) > 6 else None
             }
-    except Exception:
-        pass
+    except Exception as main_e:
+        # Fallback si las nuevas columnas no existen aún en la base de datos o hay otro error
+        try:
+            resultado = run_query(
+                'SELECT id, usuario, email, rol FROM usuarios WHERE id = ?',
+                (usuario_id,),
+                fetchone=True
+            )
+            if resultado:
+                return {
+                    'id': resultado[0],
+                    'usuario': resultado[1],
+                    'email': resultado[2],
+                    'rol': resultado[3],
+                    'foto_perfil': None,
+                    'descripcion': f'ERROR_DB: {str(main_e)}',
+                    'github_url': None
+                }
+        except Exception:
+            pass
     return None
 
 def actualizar_perfil_usuario(usuario_id, foto_perfil=None, descripcion=None, github_url=None):

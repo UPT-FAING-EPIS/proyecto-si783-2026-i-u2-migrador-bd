@@ -32,6 +32,17 @@
                 <div class="perfil-info-basica">
                     <h3>{{ perfil.usuario }}</h3>
                     <p class="perfil-email">{{ perfil.email }}</p>
+                    
+                    {% if perfil.descripcion %}
+                    <p class="perfil-bio" id="bio-display" style="margin-top: 10px; font-size: 14px; color: #475569; font-style: italic; max-width: 300px; text-align: left;">
+                        "{{ perfil.descripcion }}"
+                    </p>
+                    {% else %}
+                    <p class="perfil-bio" id="bio-display" style="margin-top: 10px; font-size: 14px; color: #94a3b8; font-style: italic; max-width: 300px; text-align: left;">
+                        Sin descripción.
+                    </p>
+                    {% endif %}
+
                     {% if perfil.github_url %}
                     <p class="perfil-github" style="margin-top: 5px;">
                         <a href="{{ perfil.github_url }}" target="_blank" style="color: #244a7c; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; font-weight: 500;">
@@ -49,7 +60,13 @@
                 <div><strong style="font-size: 22px; color: #244a7c;">{{ seguidos }}</strong><br><span style="font-size: 13px; color: #64748b; font-weight: 500;">Seguidos</span></div>
             </div>
 
-            <form action="{{ url_for('principal.actualizar_perfil') }}" method="POST" enctype="multipart/form-data" class="formulario-perfil">
+            {% if error %}
+            <div style="background-color: #fee2e2; color: #b91c1c; padding: 12px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold;">
+                Error: {{ error }}
+            </div>
+            {% endif %}
+
+            <form id="form-actualizar-perfil" action="{{ url_for('principal.actualizar_perfil') }}" method="POST" enctype="multipart/form-data" class="formulario-perfil">
                 <div class="grupo-formulario">
                     <label for="foto">Cambiar foto de perfil</label>
                     <div class="file-upload-wrapper">
@@ -70,8 +87,8 @@
                 </div>
 
                 <div class="acciones-formulario" style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
-                    <button type="submit" class="boton-primario" style="flex: 1; text-align: center; font-weight: bold; border-radius: 8px;">Actualizar Perfil</button>
-                    <a href="/" class="boton-secundario" style="flex: 1; text-align: center; font-weight: bold; border-radius: 8px; text-decoration: none; display: flex; align-items: center; justify-content: center;">Cancelar</a>
+                    <button type="submit" id="btn-actualizar" class="boton-primario" style="flex: 1; text-align: center; font-weight: bold; border-radius: 8px; position: relative;">Actualizar Perfil</button>
+                    <a href="/" class="boton-secundario" style="flex: 1; text-align: center; font-weight: bold; border-radius: 8px; text-decoration: none; display: flex; align-items: center; justify-content: center;">Volver</a>
                 </div>
             </form>
         </div>
@@ -83,5 +100,96 @@
         var fileName = e.target.files[0] ? e.target.files[0].name : "Ningún archivo seleccionado";
         document.getElementById('file-name-display').textContent = fileName;
     });
+
+    document.getElementById('form-actualizar-perfil').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('btn-actualizar');
+        const form = this;
+        const formData = new FormData(form);
+        
+        // Cambiar estado del botón
+        const textoOriginal = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: inline-block; width: 1rem; height: 1rem; vertical-align: -0.125em; border: 0.2em solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spinner-border .75s linear infinite;"></span> Actualizando...';
+        btn.disabled = true;
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.estado === 'exito') {
+                // Actualizar las imágenes en la página añadiendo un timestamp para romper caché
+                const t = new Date().getTime();
+                
+                // Actualizar avatar grande
+                const avatarsLarge = document.querySelectorAll('.avatar-large');
+                avatarsLarge.forEach(img => {
+                    if (img.tagName === 'IMG') {
+                        let url = new URL(img.src);
+                        url.searchParams.set('t', t);
+                        img.src = url.toString();
+                    } else {
+                        // Si era el div predeterminado, recargar la página es más seguro para cambiar el DOM,
+                        // pero la experiencia fluida lo pedía, así que forzaremos un recargo suave o lo ignoraremos.
+                        window.location.reload();
+                    }
+                });
+
+                // Actualizar avatar del nav
+                const avatarsNav = document.querySelectorAll('.avatar-nav');
+                avatarsNav.forEach(img => {
+                    if (img.tagName === 'IMG') {
+                        let url = new URL(img.src);
+                        url.searchParams.set('t', t);
+                        img.src = url.toString();
+                    }
+                });
+
+                // Actualizar biografía en pantalla
+                const bioDisplay = document.getElementById('bio-display');
+                if (bioDisplay) {
+                    const nuevaBio = form.querySelector('[name="descripcion"]').value;
+                    if (nuevaBio.trim() !== '') {
+                        bioDisplay.textContent = '"' + nuevaBio + '"';
+                        bioDisplay.style.color = '#475569';
+                    } else {
+                        bioDisplay.textContent = 'Sin descripción.';
+                        bioDisplay.style.color = '#94a3b8';
+                    }
+                }
+
+                // Mostrar mensaje de éxito temporal
+                const originalBg = btn.style.backgroundColor;
+                btn.style.backgroundColor = '#10b981';
+                btn.innerHTML = '¡Actualizado!';
+                
+                setTimeout(() => {
+                    btn.style.backgroundColor = originalBg;
+                    btn.innerHTML = textoOriginal;
+                    btn.disabled = false;
+                }, 2000);
+            } else {
+                alert('Error: ' + data.mensaje);
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Hubo un error de conexión');
+            btn.innerHTML = textoOriginal;
+            btn.disabled = false;
+        });
+    });
 </script>
+<style>
+@keyframes spinner-border {
+  to { transform: rotate(360deg); }
+}
+</style>
 {% endblock %}

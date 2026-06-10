@@ -325,6 +325,10 @@
                 disabled>
                 📄 Reporte Excel
             </button>
+            <button onclick="limpiarInterfazLocal()" id="btn-nueva-migracion"
+                style="padding:12px 30px; background:#10b981; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer; flex:1; min-width:140px;">
+                🔄 Nueva Migración
+            </button>
         </div>
 
         <!-- LOGS -->
@@ -963,6 +967,9 @@
         const boton = event.target.closest('.motor-opcion');
         if (!boton) return;
         marcarMotorSeleccionado(boton.dataset.motor || '');
+        if (boton.dataset.motor) {
+            configurarDestino();
+        }
     });
 
     function actualizarDetectorVisual(tipoDetectado) {
@@ -1119,6 +1126,10 @@
     });
 
     socket.on('limpiar_interfaz', () => {
+        limpiarInterfazLocal();
+    });
+
+    function limpiarInterfazLocal() {
         document.getElementById('barra').style.width = '0%';
         document.getElementById('porcentaje').textContent = '0%';
         document.getElementById('tabla-actual').textContent = 'Listo para iniciar';
@@ -1128,6 +1139,8 @@
         document.getElementById('stat-errores').textContent = '0';
         document.getElementById('info-origen').style.display = 'none';
         document.getElementById('info-origen').innerHTML = '';
+        document.getElementById('panel-comparador').style.display = 'none';
+        document.getElementById('resultado-diff').innerHTML = '';
         document.getElementById('zona-subida').innerHTML = '<div style="font-size:40px;">[ Subir Archivo ]</div><p>Click para seleccionar o arrastra un archivo aquí</p>';
         document.getElementById('archivo-input').value = '';
         document.getElementById('motor-destino').value = '';
@@ -1139,7 +1152,7 @@
         const btnReporte = document.getElementById('btn-reporte');
         if (btnReporte) btnReporte.disabled = true;
         actualizarDetectorVisual(null);
-    });
+    }
 
     async function descargarReporte() {
         try {
@@ -1194,7 +1207,10 @@
             } catch (parseErr) {
                 const txt = await resp.text().catch(() => null);
                 alert('Error al subir archivo: ' + (txt || parseErr.message));
-                document.getElementById('zona-subida').innerHTML = '<div style="padding:40px; color:#244a7c;">[Error]</div>';
+                document.getElementById('zona-subida').innerHTML = `
+                    <div style="font-size:40px;">[ Subir Archivo ]</div>
+                    <p>Click para seleccionar o arrastra un archivo aquí</p>
+                `;
                 return;
             }
 
@@ -1216,10 +1232,18 @@
             } else if (datos) {
                 alert(datos.mensaje || 'Error desconocido');
                 actualizarDetectorVisual(null);
+                document.getElementById('zona-subida').innerHTML = `
+                    <div style="font-size:40px;">[ Subir Archivo ]</div>
+                    <p>Click para seleccionar o arrastra un archivo aquí</p>
+                `;
             }
         } catch (e) {
             alert('Error: ' + e.message);
             actualizarDetectorVisual(null);
+            document.getElementById('zona-subida').innerHTML = `
+                <div style="font-size:40px;">[ Subir Archivo ]</div>
+                <p>Click para seleccionar o arrastra un archivo aquí</p>
+            `;
         }
     }
 
@@ -1617,15 +1641,25 @@
                     estado_app.origen.tipo = tipoSeleccionadoValidar;
                 }
 
-                // Recargar el resumen de origen
+                // Recargar el resumen de origen con las nuevas tablas
                 const infoOrigen = document.getElementById('info-origen');
-                if (infoOrigen && infoOrigen.innerHTML) {
-                    // Actualizar solo el tipo mostrado
-                    infoOrigen.innerHTML = infoOrigen.innerHTML.replace(
-                        /Motor de origen detectado<\/div>\s*<p class="motor">[^<]+<\/p>/,
-                        `Motor de origen detectado</div>
-                    <p class="motor">${tipoSeleccionadoValidar}</p>`
-                    );
+                if (infoOrigen) {
+                    const fileRegex = /Archivo:\s*([^<]+)/;
+                    const match = infoOrigen.innerHTML.match(fileRegex);
+                    const fileName = match ? match[1].trim().split('<')[0] : 'Archivo origen';
+                    
+                    const datosOrigen = {
+                        tipo_detectado: datos.tipo_nuevo,
+                        mensaje_deteccion: 'Validado manualmente por el usuario',
+                        total_tablas: datos.total_tablas,
+                        tablas: datos.tablas,
+                        esquema: datos.esquema
+                    };
+                    
+                    infoOrigen.innerHTML = `
+                        <p style="color:#244a7c; margin:0 0 10px 0; font-weight:bold;">Archivo: ${fileName}</p>
+                        ${_renderizarOrigen(datosOrigen)}
+                    `;
                 }
 
                 actualizarDetectorVisual(tipoSeleccionadoValidar);
