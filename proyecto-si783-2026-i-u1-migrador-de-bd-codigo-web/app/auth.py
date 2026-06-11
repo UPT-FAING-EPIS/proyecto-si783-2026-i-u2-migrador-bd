@@ -91,7 +91,7 @@ def run_query(sql, params=(), fetchone=False, fetchall=False, commit=False, retu
                 pass
             raise
     else:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(DB_PATH, timeout=15)
         c = conn.cursor()
         try:
             c.execute(sql, params)

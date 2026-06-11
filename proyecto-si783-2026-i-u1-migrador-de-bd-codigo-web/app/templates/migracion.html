@@ -250,10 +250,6 @@
             </div>
         </div>
 
-        <button onclick="configurarDestino()"
-            style="margin-top:15px; padding:10px 20px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; width:100%;">
-            Configurar Destino
-        </button>
         <span id="destino-estado" style="display:block; margin-top:10px; font-weight:bold;"></span>
     </div>
 </div>
@@ -919,7 +915,7 @@
             <p class="detalle">${detalleMotor}</p>
             <p class="meta">Tablas detectadas: ${tablas}</p>
             <button onclick="abrirModalValidarTipo('${tipo}')" style="margin-top:10px; padding:8px 12px; background:#244a7c; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px;">
-                ✓ Validar o cambiar tipo
+                ✏️ Cambiar motor (Opcional)
             </button>
             ${htmlTablas}
         </div>
@@ -2025,7 +2021,11 @@
         try {
             // cache: 'no-store' evita que el navegador sirva datos viejos
             const resp = await fetch('/api/historial', { cache: 'no-store' });
+            if (!resp.ok) return; // DB lock timeout, no limpiar UI
+            
             const datos = await resp.json();
+            
+            if (datos.estado === 'error') return; // Si la BD falló y no hay memoria, no limpiar UI
 
             if (!datos.historial || datos.historial.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color:#999; padding:40px;">No hay migraciones registradas todavía.</p>';

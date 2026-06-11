@@ -837,6 +837,28 @@ def api_cli_execute():
     
     _registrar_actividad_ip(f'CLI: {comando_str}')
     
+    # Reconstruir estado desde sesión si estamos en un worker distinto
+    if not estado_app.get('origen'):
+        archivo_actual = session.get('archivo_actual')
+        tipo_origen = session.get('tipo_origen')
+        if archivo_actual and tipo_origen:
+            try:
+                ruta = os.path.join(_carpeta_upload_usuario(), archivo_actual)
+                if os.path.exists(ruta):
+                    origen = ConectorOrigen(ruta, tipo_origen)
+                    if origen.tablas:
+                        estado_app['origen'] = origen
+            except Exception:
+                pass
+                
+    if not estado_app.get('destino'):
+        motor_destino = session.get('motor_destino')
+        if motor_destino:
+            try:
+                estado_app['destino'] = CargadorDestino(motor_destino)
+            except Exception:
+                pass
+    
     if cmd == 'help':
         html = """
         <div style="color: #60a5fa; font-weight: bold; margin-bottom: 5px;">Comandos Disponibles:</div>
@@ -884,6 +906,8 @@ def api_cli_execute():
             if not origen.tablas:
                 return jsonify({'html': '<span class="color-red">El archivo no contiene tablas.</span>'})
             estado_app['origen'] = origen
+            session['archivo_actual'] = archivo
+            session['tipo_origen'] = tipo
             html = f'<span class="color-green">Origen cargado exitosamente: {len(origen.tablas)} tablas detectadas ({tipo}).</span>'
             return jsonify({'html': html})
         except Exception as e:
@@ -902,6 +926,7 @@ def api_cli_execute():
         
         try:
             estado_app['destino'] = CargadorDestino(motor=motor_formateado)
+            session['motor_destino'] = motor_formateado
             return jsonify({'html': f'<span class="color-green">Destino conectado exitosamente en modo: {motor_formateado}.</span>'})
         except Exception as e:
             return jsonify({'html': f'<span class="color-red">Error conectando destino: {str(e)}</span>'})
@@ -983,9 +1008,22 @@ def api_subir_archivo():
         _registrar_log(f'Error al guardar "{nombre}": {str(e)}', 'error', ip)
         return jsonify({'estado': 'error', 'mensaje': f'No se pudo guardar el archivo: {str(e)}'})
 
-    # Ejecutar la detección dentro de un bloque try/except para evitar 500s
+    # Ejecutar la detección con reintentos para evitar bloqueos por antivirus en Windows
     try:
-        tipo, mensaje, _ = DetectorBaseDatos.detectar(ruta, nombre)
+        import time
+        intentos = 0
+        tipo = 'Desconocido'
+        mensaje = 'Error detectando tipo'
+        _dummy = None
+        while intentos < 3:
+            try:
+                tipo, mensaje, _dummy = DetectorBaseDatos.detectar(ruta, nombre)
+                if tipo != 'Desconocido':
+                    break
+            except Exception:
+                pass
+            time.sleep(0.5)
+            intentos += 1
     except Exception as e:
         _registrar_log(f'Error detectando tipo para "{nombre}": {str(e)}', 'error', ip)
         return jsonify({'estado': 'error', 'mensaje': 'Error detectando tipo de archivo'})
@@ -1034,6 +1072,8 @@ def api_subir_archivo():
             return jsonify({'estado': 'error', 'mensaje': 'No se encontraron tablas ni objetos SQL. Si el .bak es un backup binario, primero restaure y exporte a .sql.'})
 
         estado_app['origen'] = origen
+        session['archivo_actual'] = nombre
+        session['tipo_origen'] = tipo
         _registrar_log(
             f'Archivo cargado: "{nombre}" ({tipo}) - {len(origen.tablas)} tablas', 'info', ip
         )
@@ -1140,6 +1180,7 @@ def api_excluir_tablas():
     datos = request.json or {}
     excluidas = datos.get('excluidas', [])
     estado_app['excluidas'] = excluidas
+    session['excluidas'] = excluidas
     return jsonify({'estado': 'exito'})
 
 @principal.route('/api/validar-tipo-bd', methods=['POST'])
@@ -1174,6 +1215,7 @@ def api_validar_tipo_bd():
     # Cambiar el tipo de BD en el origen
     tipo_anterior = estado_app['origen'].tipo
     estado_app['origen'].tipo = tipo_sugerido
+    session['tipo_origen'] = tipo_sugerido
     
     ip = request.remote_addr or 'desconocida'
     _registrar_log(
@@ -1279,6 +1321,7 @@ def api_configurar_destino():
     try:
         destino = CargadorDestino(motor)
         estado_app['destino'] = destino
+        session['motor_destino'] = motor
         
         if estado_app['origen'] and estado_app['origen'].esquema:
             creadas = destino.crear_estructura(estado_app['origen'].esquema)
@@ -1318,11 +1361,37 @@ def api_configurar_destino():
 @requerir_login
 def api_iniciar_migracion():
     _registrar_actividad_ip('Iniciar migración')  # Registrar actividad real
-    if not estado_app['origen']:
+    
+    # Reconstruir estado desde sesión si estamos en un worker distinto
+    if not estado_app.get('origen'):
+        archivo_actual = session.get('archivo_actual')
+        tipo_origen = session.get('tipo_origen')
+        if archivo_actual and tipo_origen:
+            try:
+                ruta = os.path.join(_carpeta_upload_usuario(), archivo_actual)
+                if os.path.exists(ruta):
+                    origen = ConectorOrigen(ruta, tipo_origen)
+                    if origen.tablas:
+                        estado_app['origen'] = origen
+            except Exception:
+                pass
+                
+    if not estado_app.get('destino'):
+        motor_destino = session.get('motor_destino')
+        if motor_destino:
+            try:
+                estado_app['destino'] = CargadorDestino(motor_destino)
+            except Exception:
+                pass
+                
+    if 'excluidas' not in estado_app and 'excluidas' in session:
+        estado_app['excluidas'] = session['excluidas']
+
+    if not estado_app.get('origen'):
         return jsonify({'estado': 'error', 'mensaje': 'Suba un archivo primero'})
-    if not estado_app['destino']:
+    if not estado_app.get('destino'):
         return jsonify({'estado': 'error', 'mensaje': 'Configure el destino primero'})
-    if estado_app['proceso_activo']:
+    if estado_app.get('proceso_activo'):
         return jsonify({'estado': 'error', 'mensaje': 'Ya hay una migracion en curso'})
     
     datos = request.json or {}
@@ -1454,6 +1523,7 @@ def ejecutar_migracion(usuario_id='anonimo'):
             if origen:
                 # Registrar en historial con más detalles
                 ahora = datetime.now()
+                duracion_seg = (ahora - (estado_app.get('_fecha_inicio_migracion', ahora))).total_seconds()
                 estado_app['historial'].append({
                     'id': len(estado_app['historial']) + 1,
                     'fecha': ahora.isoformat(),
@@ -1464,8 +1534,29 @@ def ejecutar_migracion(usuario_id='anonimo'):
                     'total_tablas': total,
                     'ip': estado_app.get('_ip_migracion', 'desconocida'),
                     'usuario': 'sistema',
-                    'duracion_segundos': (ahora - (estado_app.get('_fecha_inicio_migracion', ahora))).total_seconds()
+                    'duracion_segundos': duracion_seg
                 })
+
+                try:
+                    from app.auth import run_query
+                    run_query(
+                        '''INSERT INTO historial_migraciones 
+                        (usuario_id, motor_origen, motor_destino, tablas_migradas, registros_migrados, errores, duracion_segundos, fecha) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (
+                            usuario_id if usuario_id != 'anonimo' else None,
+                            os.path.basename(origen.ruta) if getattr(origen, 'ruta', None) else '',
+                            destino.motor if destino else 'Desconocido',
+                            estado_app['metricas'].get('tablas_ok', 0),
+                            estado_app['metricas'].get('cargados', 0),
+                            estado_app['metricas'].get('errores', 0),
+                            duracion_seg,
+                            ahora.strftime('%Y-%m-%d %H:%M:%S')
+                        ),
+                        commit=True
+                    )
+                except Exception as e_db:
+                    _registrar_log(f'Error guardando en BD historial: {str(e_db)}', 'error')
 
             _registrar_log(
                 f'Migracion finalizada. Tablas: {estado_app["metricas"].get("tablas_ok",0)}, '
@@ -1708,7 +1799,29 @@ def api_crear_estructura():
 
 @principal.route('/api/estado')
 def api_estado():
-    if estado_app['origen']:
+    # Intentar reconstruir si el worker no tiene estado
+    if not estado_app.get('origen'):
+        archivo_actual = session.get('archivo_actual')
+        tipo_origen = session.get('tipo_origen')
+        if archivo_actual and tipo_origen:
+            try:
+                ruta = os.path.join(_carpeta_upload_usuario(), archivo_actual)
+                if os.path.exists(ruta):
+                    origen = ConectorOrigen(ruta, tipo_origen)
+                    if origen.tablas:
+                        estado_app['origen'] = origen
+            except Exception:
+                pass
+                
+    if not estado_app.get('destino'):
+        motor_destino = session.get('motor_destino')
+        if motor_destino:
+            try:
+                estado_app['destino'] = CargadorDestino(motor_destino)
+            except Exception:
+                pass
+
+    if estado_app.get('origen'):
         origen = estado_app['origen']
         return jsonify({
             'estado': 'exito',
@@ -1726,13 +1839,42 @@ def api_estado():
 
 @principal.route('/api/historial')
 def api_historial():
-    # Devolver historial ordenado: más reciente primero
-    historial_ordenado = sorted(
-        estado_app['historial'],
-        key=lambda x: x.get('timestamp', x.get('fecha', '')),
-        reverse=True
-    )
-    resp = jsonify({'historial': historial_ordenado, 'logs': estado_app['logs']})
+    try:
+        from app.auth import run_query
+        usuario_id = session.get('usuario_id')
+        res = run_query(
+            '''SELECT id, fecha, motor_origen, motor_destino, tablas_migradas, registros_migrados, errores, duracion_segundos 
+               FROM historial_migraciones 
+               WHERE usuario_id = ? OR usuario_id IS NULL 
+               ORDER BY fecha DESC LIMIT 50''',
+            (usuario_id,),
+            fetchall=True
+        )
+        historial_db = []
+        if res:
+            for row in res:
+                historial_db.append({
+                    'id': row[0],
+                    'timestamp': row[1],
+                    'archivo_origen': row[2],
+                    'motor_destino': row[3],
+                    'metricas': {
+                        'tablas_ok': row[4],
+                        'cargados': row[5],
+                        'errores': row[6]
+                    },
+                    'duracion_segundos': row[7]
+                })
+        resp = jsonify({'estado': 'exito', 'historial': historial_db, 'logs': estado_app['logs']})
+    except Exception as e:
+        if not estado_app['historial']:
+            return jsonify({'estado': 'error', 'mensaje': 'Error leyendo base de datos'}), 500
+        historial_ordenado = sorted(
+            estado_app['historial'],
+            key=lambda x: x.get('timestamp', x.get('fecha', '')),
+            reverse=True
+        )
+        resp = jsonify({'estado': 'exito', 'historial': historial_ordenado, 'logs': estado_app['logs']})
     # Sin caché para datos en tiempo real
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     resp.headers['Pragma'] = 'no-cache'
