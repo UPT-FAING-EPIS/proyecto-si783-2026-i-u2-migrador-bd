@@ -6,7 +6,7 @@
 
 **Escuela Profesional de Ingeniería de Sistemas**
 
-**Proyecto *MigradorBD - Sistema de Migración de Bases de Datos***
+**Proyecto *Migrador DB Enterprise - Sistema de Migración de Bases de Datos***
 
 Curso: *Ingeniería de Software (SI783)*
 
@@ -55,7 +55,7 @@ Integrantes:
 </tbody>
 </table>
 
-Sistema *MigradorBD*
+Sistema *Migrador DB Enterprise*
 
 Documento de Arquitectura de Software
 
@@ -137,9 +137,9 @@ INDICE GENERAL
 <span id="proposito-sad"></span>
 ### 1.1. Propósito (Diagrama 4+1)
 
-Este documento presenta la arquitectura del sistema MigradorBD utilizando el modelo de vistas 4+1 de Philippe Kruchten. Se describen las vistas de caso de uso, lógica, implementación, procesos y despliegue que conforman la arquitectura completa del sistema.
+Este documento presenta la arquitectura del sistema Migrador DB Enterprise utilizando el modelo de vistas 4+1 de Philippe Kruchten. Se describen las vistas de caso de uso, lógica, implementación, procesos y despliegue que conforman la arquitectura completa del sistema.
 
-La arquitectura de MigradorBD se fundamenta en una separación clara de responsabilidades a través de módulos especializados para cada etapa del proceso ETL (Extracción, Transformación y Carga), complementados por una capa de presentación web basada en Flask y una capa de autenticación multi-proveedor.
+La arquitectura de Migrador DB Enterprise se fundamenta en una separación clara de responsabilidades a través de módulos especializados para cada etapa del proceso ETL (Extracción, Transformación y Carga) con algoritmo de procesamiento por bloques (Chunking RAM), complementados por una capa de presentación web basada en Flask y una capa de autenticación multi-proveedor.
 
 Las decisiones arquitectónicas priorizan:
 - **Modularidad**: Cada etapa del ETL es un módulo independiente.
@@ -149,7 +149,7 @@ Las decisiones arquitectónicas priorizan:
 <span id="alcance-sad"></span>
 ### 1.2. Alcance
 
-Este documento cubre la arquitectura del sistema MigradorBD completo, incluyendo:
+Este documento cubre la arquitectura del sistema Migrador DB Enterprise completo, incluyendo:
 - La estructura de paquetes y módulos.
 - El flujo de datos a través del pipeline ETL.
 - La arquitectura de autenticación y autorización.
@@ -229,7 +229,7 @@ El documento se organiza siguiendo el modelo 4+1:
 | RNF-03 | Cookies HttpOnly + SameSite=Lax | Alta | Seguridad |
 | RNF-04 | Aislamiento de archivos por usuario (carpetas separadas) | Alta | Seguridad |
 | RNF-05 | Soporte dual: threading (Windows) y eventlet (Linux) | Alta | Portabilidad |
-| RNF-06 | Despliegue con Nginx + Gunicorn + Supervisor | Media | Operabilidad |
+| RNF-06 | Despliegue con Nginx + Gunicorn + Supervisor + Systemd | Media | Operabilidad |
 | RNF-07 | Errores del servidor devuelven JSON (no HTML) | Media | Interoperabilidad |
 
 ### 2.2. Restricciones
@@ -283,7 +283,7 @@ La vista lógica describe la estructura de clases y paquetes del sistema.
 #### 3.2.1. Diagrama de Subsistemas (paquetes)
 
 ```
-MigradorBD/
+Migrador DB Enterprise/
 ├── app/                        # Capa de Presentación + Autenticación
 │   ├── __init__.py            # Factory de la aplicación Flask
 │   ├── routes.py              # Blueprint principal (1453 líneas, todas las rutas)

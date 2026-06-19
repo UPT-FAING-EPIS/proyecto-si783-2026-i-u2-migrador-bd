@@ -6,7 +6,7 @@
 
 **Escuela Profesional de Ingeniería de Sistemas**
 
-**Proyecto *MigradorBD - Sistema de Migración de Bases de Datos***
+**Proyecto *Migrador DB Enterprise - Sistema de Migración de Bases de Datos***
 
 Curso: *Ingeniería de Software (SI783)*
 
@@ -55,7 +55,7 @@ Integrantes:
 </tbody>
 </table>
 
-Sistema *MigradorBD*
+Sistema *Migrador DB Enterprise*
 
 Documento de Especificación de Requerimientos de Software
 
@@ -158,9 +158,9 @@ Versión *1.0*
 <span id="introduccion"></span>
 ## INTRODUCCION
 
-El presente documento detalla la Especificación de Requerimientos de Software (SRS) para el sistema MigradorBD, una aplicación web integral de migración de bases de datos. Este documento describe los requerimientos funcionales y no funcionales del sistema, los perfiles de usuario, los procesos involucrados y las reglas de negocio que rigen su funcionamiento.
+El presente documento detalla la Especificación de Requerimientos de Software (SRS) para el sistema Migrador DB Enterprise, una aplicación web integral de migración de bases de datos. Este documento describe los requerimientos funcionales y no funcionales del sistema, los perfiles de usuario, los procesos involucrados y las reglas de negocio que rigen su funcionamiento.
 
-MigradorBD fue concebido para resolver la problemática de la migración de datos entre sistemas de gestión de bases de datos heterogéneos, proporcionando una solución automatizada basada en el paradigma ETL (Extracción, Transformación y Carga).
+Migrador DB Enterprise fue concebido para resolver la problemática de la migración de datos entre sistemas de gestión de bases de datos heterogéneos, proporcionando una solución automatizada basada en el paradigma ETL (Extracción, Transformación y Carga).
 
 ---
 
@@ -170,7 +170,7 @@ MigradorBD fue concebido para resolver la problemática de la migración de dato
 <span id="nombre-del-proyecto"></span>
 ### 1. Nombre del Proyecto
 
-MigradorBD – Sistema Integral de Migración de Bases de Datos
+Migrador DB Enterprise – Sistema Integral de Migración de Bases de Datos
 
 <span id="vision-del-proyecto"></span>
 ### 2. Visión
@@ -271,7 +271,7 @@ Proceso manual actual de migración:
 <span id="proceso-propuesto"></span>
 ### b) Diagrama del Proceso Propuesto – Diagrama de actividades
 
-Proceso automatizado con MigradorBD:
+Proceso automatizado con Migrador DB Enterprise:
 
 1. El usuario inicia sesión en la aplicación web.
 2. Sube el archivo de base de datos de origen.
@@ -331,7 +331,7 @@ Proceso automatizado con MigradorBD:
 | RNF-05 | La interfaz debe ser responsive y compatible con navegadores modernos | Media | Usabilidad |
 | RNF-06 | El sistema debe aislar los archivos de cada usuario en carpetas separadas | Alta | Seguridad |
 | RNF-07 | Los errores del servidor deben devolver JSON, no HTML | Media | Mantenibilidad |
-| RNF-08 | El sistema debe soportar despliegue con Nginx + Gunicorn + Supervisor | Media | Portabilidad |
+| RNF-08 | El sistema debe soportar despliegue con Nginx + Gunicorn + Supervisor + Systemd | Media | Portabilidad |
 | RNF-09 | El tamaño máximo de archivo debe ser configurable | Baja | Configurabilidad |
 | RNF-10 | El sistema debe funcionar tanto en Windows (threading) como en Linux (eventlet) | Alta | Portabilidad |
 
@@ -441,7 +441,7 @@ El sistema está organizado en los siguientes paquetes/módulos:
 <span id="conclusiones-srs"></span>
 ## CONCLUSIONES
 
-El documento SRS define de manera integral los requerimientos funcionales y no funcionales del sistema MigradorBD. Se han identificado 24 requerimientos funcionales y 10 no funcionales que cubren desde la funcionalidad core (proceso ETL) hasta aspectos de seguridad, usabilidad y portabilidad. El sistema está diseñado con una arquitectura modular que facilita su extensión y mantenimiento.
+El documento SRS define de manera integral los requerimientos funcionales y no funcionales del sistema Migrador DB Enterprise. Se han identificado 24 requerimientos funcionales y 10 no funcionales que cubren desde la funcionalidad core (proceso ETL) hasta aspectos de seguridad, usabilidad y portabilidad. El sistema está diseñado con una arquitectura modular que facilita su extensión y mantenimiento.
 
 <span id="recomendaciones-srs"></span>
 ## RECOMENDACIONES

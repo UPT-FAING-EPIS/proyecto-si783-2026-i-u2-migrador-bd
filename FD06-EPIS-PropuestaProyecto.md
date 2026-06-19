@@ -6,7 +6,7 @@
 
 **Escuela Profesional de Ingeniería de Sistemas**
 
-**Propuesta del Proyecto *MigradorBD - Sistema de Migración de Bases de Datos***
+**Propuesta del Proyecto *Migrador DB Enterprise - Sistema de Migración de Bases de Datos***
 
 Curso: *Ingeniería de Software (SI783)*
 
@@ -25,7 +25,9 @@ Integrantes:
 
 **Proyecto**
 
-***MigradorBD – Sistema Integral de Migración de Bases de Datos, Tacna, 2026***
+***Migrador DB Enterprise – Sistema Integral de Migración de Bases de Datos, Tacna, 2026
+
+Acceso a la plataforma oficial: https://migradordb.online/***
 
 **Presentado por:**
 
@@ -112,7 +114,7 @@ II Presupuesto
 
 4.  [Evaluación Financiera](#evaluacion-financiera)
 
-[Anexo 01 – Requerimientos del Sistema MigradorBD](#anexo-requerimientos)
+[Anexo 01 – Requerimientos del Sistema Migrador DB Enterprise](#anexo-requerimientos)
 
 **\**
 
@@ -127,7 +129,9 @@ II Presupuesto
 <thead>
 <tr>
 <th colspan="2"><p><strong>Nombre del Proyecto propuesto</strong>:</p>
-<p><em>MigradorBD – Sistema Integral de Migración de Bases de Datos, Tacna, 2026</em></p></th>
+<p><em>Migrador DB Enterprise – Sistema Integral de Migración de Bases de Datos, Tacna, 2026
+
+Acceso a la plataforma oficial: https://migradordb.online/</em></p></th>
 </tr>
 </thead>
 <tbody>
@@ -185,7 +189,7 @@ La justificación del proyecto se fundamenta en:
 <span id="objetivo-general-pp"></span>
 ### 3. Objetivo general
 
-Desarrollar un sistema web de migración de bases de datos que automatice el proceso ETL (Extracción, Transformación y Carga) entre múltiples motores, ofreciendo detección automática del motor de origen, autenticación segura, interfaz web interactiva con progreso en tiempo real e integración con GitHub.
+Desarrollar un sistema web de migración de bases de datos que automatice el proceso ETL (Extracción, Transformación y Carga) con algoritmo de procesamiento por bloques (Chunking RAM) entre múltiples motores, ofreciendo detección automática del motor de origen, autenticación segura, interfaz web interactiva con progreso en tiempo real e integración con GitHub.
 
 <span id="beneficios-pp"></span>
 ### 4. Beneficios
@@ -417,7 +421,7 @@ El análisis completo se encuentra en el documento FD01 (Informe de Factibilidad
 ---
 
 <span id="anexo-requerimientos"></span>
-## Anexo 01 – Requerimientos del Sistema MigradorBD
+## Anexo 01 – Requerimientos del Sistema Migrador DB Enterprise
 
 ### Requerimientos Funcionales Principales
 

@@ -8,7 +8,7 @@
 
 **Informe Final**
 
-**Proyecto *MigradorBD - Sistema de Migración de Bases de Datos***
+**Proyecto *Migrador DB Enterprise - Sistema de Migración de Bases de Datos***
 
 Curso: *Ingeniería de Software (SI783)*
 
@@ -137,7 +137,7 @@ Las organizaciones y profesionales de TI enfrentan la necesidad frecuente de mig
 <span id="justificacion"></span>
 ### b. Justificación
 
-El desarrollo de MigradorBD se justifica por las siguientes razones:
+El desarrollo de Migrador DB Enterprise se justifica por las siguientes razones:
 
 - **Necesidad del mercado**: No existe una herramienta web gratuita y de código abierto que soporte migración multi-motor con detección automática.
 - **Democratización del acceso**: Una herramienta gratuita permite que organizaciones de todos los tamaños y estudiantes accedan a funcionalidades de migración profesional.
@@ -154,9 +154,9 @@ El desarrollo de MigradorBD se justifica por las siguientes razones:
 - Preservación de objetos SQL: vistas, triggers, procedimientos almacenados, funciones, índices.
 - Autenticación multi-proveedor: registro local con verificación por email, Google OAuth, GitHub OAuth.
 - Integración con GitHub: listar repos, crear repos, subir archivos.
-- Panel de administración con gestión de usuarios y monitoreo de IPs.
+- Panel de administración con gestión de usuarios monitoreo de IPs y foro de comunidad.
 - Historial de migraciones con métricas de rendimiento.
-- Comunicación en tiempo real vía WebSocket.
+- Comunicación en tiempo real vía WebSocket y foro de comunidad.
 
 **El sistema NO incluye:**
 - Conexión directa a servidores de bases de datos remotos (solo procesa archivos).
@@ -187,7 +187,7 @@ Desarrollar un sistema web de migración de bases de datos que permita la extrac
 
 6. Integrar el sistema con la API de GitHub (`app/routes.py`) para permitir listar repositorios, crear nuevos repositorios y subir archivos de migración directamente desde la interfaz web.
 
-7. Desplegar el sistema en producción en un VPS Ubuntu con Nginx, Gunicorn, Supervisor y certificado SSL.
+7. Desplegar el sistema en producción en un VPS Ubuntu con Nginx, Gunicorn, Supervisor, Systemd y certificado SSL.
 
 ---
 
@@ -198,9 +198,9 @@ Desarrollar un sistema web de migración de bases de datos que permita la extrac
 
 El proceso ETL es un paradigma fundamental en la gestión de datos que consiste en tres fases:
 
-- **Extracción (Extract)**: Obtención de datos desde uno o más sistemas de origen. En MigradorBD, esto se implementa en `ConectorOrigen` que soporta múltiples formatos de entrada.
-- **Transformación (Transform)**: Modificación de los datos para adaptarlos al formato del destino. En MigradorBD, `MapeadorDatos` normaliza nombres de columnas, convierte tipos y elimina datos nulos.
-- **Carga (Load)**: Inserción de los datos transformados en el sistema de destino. En MigradorBD, `CargadorDestino` genera exportaciones nativas para cada motor.
+- **Extracción (Extract)**: Obtención de datos desde uno o más sistemas de origen. En Migrador DB Enterprise, esto se implementa en `ConectorOrigen` que soporta múltiples formatos de entrada.
+- **Transformación (Transform)**: Modificación de los datos para adaptarlos al formato del destino. En Migrador DB Enterprise, `MapeadorDatos` normaliza nombres de columnas, convierte tipos y elimina datos nulos.
+- **Carga (Load)**: Inserción de los datos transformados en el sistema de destino. En Migrador DB Enterprise, `CargadorDestino` genera exportaciones nativas para cada motor.
 
 ### 4.2. Sistemas de Gestión de Bases de Datos
 
@@ -335,7 +335,7 @@ El proyecto se desarrolló siguiendo una metodología ágil adaptada, con las si
 <span id="conclusiones-pf"></span>
 ## 8. Conclusiones
 
-1. Se logró desarrollar exitosamente el sistema MigradorBD, una aplicación web integral de migración de bases de datos que implementa un proceso ETL completo con soporte para más de 15 motores de bases de datos destino.
+1. Se logró desarrollar exitosamente el sistema Migrador DB Enterprise, una aplicación web integral de migración de bases de datos que implementa un proceso ETL completo con soporte para más de 15 motores de bases de datos destino.
 
 2. El módulo de detección automática (`DetectorBaseDatos`) identifica correctamente el motor de origen analizando el contenido del archivo, no solo su extensión, lo que mejora significativamente la experiencia del usuario.
 

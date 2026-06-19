@@ -10,7 +10,7 @@
 
 **Escuela Profesional de Ingeniería de Sistemas**
 
-**Proyecto *MigradorBD - Sistema de Migración de Bases de Datos***
+**Proyecto *Migrador DB Enterprise - Sistema de Migración de Bases de Datos***
 
 Curso: *Ingeniería de Software (SI783)*
 
@@ -35,7 +35,7 @@ Integrantes:
 |Versión|Hecha por|Revisada por|Aprobada por|Fecha|Motivo|
 |1\.0|JLM / UHR|JLM|UHR|06/06/2026|Versión Original|
 
-**Sistema *MigradorBD***
+**Sistema *Migrador DB Enterprise***
 
 **Documento de Visión**
 
@@ -125,11 +125,11 @@ Integrantes:
 
     1.1	Propósito
 
-    El propósito de este documento es definir la visión del sistema MigradorBD, describiendo sus características, alcance y los objetivos que se pretenden alcanzar. Este documento está dirigido a los integrantes del equipo de desarrollo, al docente evaluador y a cualquier interesado en comprender la dirección y los beneficios del proyecto.
+    El propósito de este documento es definir la visión del sistema Migrador DB Enterprise, describiendo sus características, alcance y los objetivos que se pretenden alcanzar. Este documento está dirigido a los integrantes del equipo de desarrollo, al docente evaluador y a cualquier interesado en comprender la dirección y los beneficios del proyecto.
 
     1.2	Alcance
 
-    MigradorBD es un sistema web de migración de bases de datos que implementa un proceso ETL (Extracción, Transformación y Carga) completo. El sistema permite:
+    Migrador DB Enterprise es un sistema web de migración de bases de datos que implementa un proceso ETL (Extracción, Transformación y Carga) con algoritmo de procesamiento por bloques (Chunking RAM) completo. El sistema permite:
     
     - Subir archivos de bases de datos en múltiples formatos (SQLite, SQL, JSON, CSV, Excel).
     - Detectar automáticamente el tipo y motor de la base de datos de origen.
@@ -167,7 +167,7 @@ Integrantes:
 
     1.5	Visión General
 
-    El documento describe el posicionamiento del producto MigradorBD en el mercado de herramientas de migración de datos, identifica a los interesados y usuarios del sistema, presenta las capacidades principales del producto y establece las restricciones y rangos de calidad esperados.
+    El documento describe el posicionamiento del producto Migrador DB Enterprise en el mercado de herramientas de migración de datos, identifica a los interesados y usuarios del sistema, presenta las capacidades principales del producto y establece las restricciones y rangos de calidad esperados.
 
 <div style="page-break-after: always; visibility: hidden">\pagebreak</div>
 
@@ -177,7 +177,7 @@ Integrantes:
 
     El mercado de migración de bases de datos está dominado por soluciones comerciales costosas (AWS DMS, Azure Database Migration Service, Oracle Data Pump) o herramientas específicas para pares de motores. Existe una oportunidad significativa para una herramienta gratuita, de código abierto, que soporte migración multi-motor desde una interfaz web unificada.
 
-    MigradorBD llena este vacío ofreciendo:
+    Migrador DB Enterprise llena este vacío ofreciendo:
     - Soporte para más de 15 motores de bases de datos (relacionales y NoSQL).
     - Detección automática del tipo de base de datos sin configuración manual.
     - Interfaz web accesible desde cualquier navegador sin instalación local.
@@ -263,7 +263,7 @@ Integrantes:
 
     4.1	Perspectiva del producto
 
-    MigradorBD es un producto independiente que funciona como una aplicación web autocontenida. No depende de otros sistemas para su operación básica, aunque se integra opcionalmente con servicios externos (Google OAuth, GitHub OAuth, GitHub API, servidor SMTP). El sistema opera bajo una arquitectura cliente-servidor donde:
+    Migrador DB Enterprise es un producto independiente que funciona como una aplicación web autocontenida. No depende de otros sistemas para su operación básica, aunque se integra opcionalmente con servicios externos (Google OAuth, GitHub OAuth, GitHub API, servidor SMTP). El sistema opera bajo una arquitectura cliente-servidor donde:
     
     - **Cliente**: Navegador web que renderiza la interfaz HTML/CSS/JS.
     - **Servidor**: Aplicación Flask que procesa las solicitudes HTTP y WebSocket.
@@ -308,7 +308,7 @@ Integrantes:
 
 5. <span id="_Toc52661350" class="anchor"></span>**Características del producto**
 
-    Las características principales de MigradorBD son:
+    Las características principales de Migrador DB Enterprise son:
 
     - **CP-01: Carga de archivos de base de datos**: Soporte para archivos .db, .sqlite, .sql, .json, .ndjson, .csv, .xlsx, .xls, .bak, .cql con un límite de 500 MB.
     - **CP-02: Detección automática de motor**: Análisis inteligente del contenido del archivo usando patrones sintácticos (CREATE TABLE, AUTO_INCREMENT, SERIAL, IDENTITY, etc.) para identificar MySQL, PostgreSQL, SQL Server, Oracle, BigQuery, Snowflake, Redshift, Cassandra, MongoDB, Elasticsearch y SQLite.
@@ -391,7 +391,7 @@ Integrantes:
 
 <span id="_Toc52661355" class="anchor"></span>**CONCLUSIONES**
 
-MigradorBD representa una solución integral para el problema de la migración de datos entre bases de datos heterogéneas. El sistema cubre el ciclo completo del proceso ETL con una interfaz web intuitiva, detección automática de motores y soporte para más de 15 motores destino. La arquitectura modular del sistema (extracción, transformación, carga, utilidades) facilita la extensibilidad y el mantenimiento del código. La integración con servicios externos (OAuth, GitHub) añade valor al permitir autenticación sin fricción y almacenamiento en la nube de las exportaciones.
+Migrador DB Enterprise representa una solución integral para el problema de la migración de datos entre bases de datos heterogéneas. El sistema cubre el ciclo completo del proceso ETL con una interfaz web intuitiva, detección automática de motores y soporte para más de 15 motores destino. La arquitectura modular del sistema (extracción, transformación, carga, utilidades) facilita la extensibilidad y el mantenimiento del código. La integración con servicios externos (OAuth, GitHub) añade valor al permitir autenticación sin fricción y almacenamiento en la nube de las exportaciones.
 
 <div style="page-break-after: always; visibility: hidden">\pagebreak</div>
 

@@ -10,7 +10,7 @@
 
 **Escuela Profesional de Ingeniería de Sistemas**
 
-**Proyecto *MigradorBD - Sistema de Migración de Bases de Datos***
+**Proyecto *Migrador DB Enterprise - Sistema de Migración de Bases de Datos***
 
 Curso: *Ingeniería de Software (SI783)*
 
@@ -30,7 +30,7 @@ Integrantes:
 </center>
 <div style="page-break-after: always; visibility: hidden">\pagebreak</div>
 
-Sistema *MigradorBD*
+Sistema *Migrador DB Enterprise*
 
 Informe de Factibilidad
 
@@ -78,7 +78,7 @@ Versión *1.0*
 
     1.1. Nombre del proyecto
 
-        MigradorBD – Sistema Integral de Migración de Bases de Datos
+        Migrador DB Enterprise – Sistema Integral de Migración de Bases de Datos
 
     1.2. Duración del proyecto
 
@@ -86,7 +86,7 @@ Versión *1.0*
 
     1.3. Descripción
 
-        MigradorBD es un sistema web integral que permite la migración de datos entre múltiples motores de bases de datos mediante un proceso ETL (Extracción, Transformación y Carga). El sistema soporta la migración entre motores relacionales (MySQL, PostgreSQL, Microsoft SQL Server, Oracle, SQLite), motores NoSQL (MongoDB, Elasticsearch, Apache Cassandra, Redis) y formatos de archivo (CSV, Excel, JSON). Adicionalmente, el sistema incluye autenticación segura con soporte OAuth (Google y GitHub), control de roles (administrador/usuario), integración directa con repositorios de GitHub para almacenamiento de exportaciones, detección automática del tipo de base de datos a partir del contenido del archivo, interfaz web interactiva con comunicación en tiempo real vía WebSocket y soporte para despliegue en producción con Nginx y Gunicorn.
+        Migrador DB Enterprise es un sistema web integral que permite la migración de datos entre múltiples motores de bases de datos mediante un proceso ETL (Extracción, Transformación y Carga) con algoritmo de procesamiento por bloques (Chunking RAM). El sistema soporta la migración entre motores relacionales (MySQL, PostgreSQL, Microsoft SQL Server, Oracle, SQLite), motores NoSQL (MongoDB, Elasticsearch, Apache Cassandra, Redis) y formatos de archivo (CSV, Excel, JSON). Adicionalmente, el sistema incluye autenticación segura con soporte OAuth (Google y GitHub), control de roles (administrador/usuario), integración directa con repositorios de GitHub para almacenamiento de exportaciones, detección automática del tipo de base de datos a partir del contenido del archivo, interfaz web interactiva con comunicación en tiempo real vía WebSocket, foro de comunidad y soporte para despliegue en producción con Nginx y Gunicorn.
 
         La importancia del proyecto radica en la necesidad de las organizaciones de migrar datos entre diferentes sistemas de gestión de bases de datos de manera eficiente, segura y sin pérdida de información. Actualmente, la migración entre motores heterogéneos es un proceso complejo que requiere conocimientos especializados y herramientas costosas.
 
@@ -159,7 +159,7 @@ Versión *1.0*
 4. <span id="_Toc52661349" class="anchor"></span>**Estudio de
     Factibilidad**
 
-    El estudio de factibilidad se realizó evaluando las dimensiones técnica, económica, operativa, legal, social y ambiental del proyecto MigradorBD. Los resultados demuestran que el proyecto es viable en todas las dimensiones evaluadas.
+    El estudio de factibilidad se realizó evaluando las dimensiones técnica, económica, operativa, legal, social y ambiental del proyecto Migrador DB Enterprise. Los resultados demuestran que el proyecto es viable en todas las dimensiones evaluadas.
 
     4.1. <span id="_Toc52661350" class="anchor"></span>Factibilidad Técnica
 
@@ -242,7 +242,7 @@ Versión *1.0*
 
     4.3. <span id="_Toc52661352" class="anchor"></span>Factibilidad Operativa
 
-        El sistema MigradorBD es operativamente factible debido a:
+        El sistema Migrador DB Enterprise es operativamente factible debido a:
 
         - **Interfaz intuitiva**: La aplicación web presenta una interfaz paso a paso que guía al usuario en el proceso de migración (subir archivo → seleccionar destino → ejecutar migración → descargar resultado).
         - **Detección automática**: El sistema detecta automáticamente el tipo de base de datos del archivo subido, eliminando la necesidad de que el usuario tenga conocimiento técnico sobre el formato del archivo.
@@ -332,7 +332,7 @@ Versión *1.0*
 
 6. <span id="_Toc52661357" class="anchor"></span>**Conclusiones**
 
-    El análisis de factibilidad del proyecto MigradorBD demuestra que el sistema es viable en todas las dimensiones evaluadas:
+    El análisis de factibilidad del proyecto Migrador DB Enterprise demuestra que el sistema es viable en todas las dimensiones evaluadas:
 
     - **Técnicamente factible**: Se dispone de todas las tecnologías necesarias (Python, Flask, SQLAlchemy, Pandas), todas de código abierto y ampliamente documentadas.
     - **Económicamente factible**: El costo total de S/. 6,590.00 es accesible y los indicadores financieros (B/C = 1.21, VAN = S/. 13,304.82, TIR = 112%) confirman la rentabilidad del proyecto.
@@ -340,4 +340,4 @@ Versión *1.0*
     - **Legalmente factible**: No existen conflictos con regulaciones legales y se cumplen las normas de protección de datos.
     - **Social y ambientalmente responsable**: El proyecto democratiza el acceso a herramientas de migración y tiene un impacto ambiental mínimo.
 
-    En consecuencia, se recomienda proceder con el desarrollo e implementación del sistema MigradorBD.
+    En consecuencia, se recomienda proceder con el desarrollo e implementación del sistema Migrador DB Enterprise.
