@@ -31,6 +31,9 @@ def crear_app():
     from app.routes import principal
     app.register_blueprint(principal)
 
+    from app.api_v1 import api_v1
+    app.register_blueprint(api_v1)
+
     # Manejador global de errores para devolver JSON en lugar de HTML
     @app.errorhandler(Exception)
     def manejar_error(error):
