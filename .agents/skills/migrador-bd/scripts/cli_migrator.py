@@ -4,6 +4,13 @@ import os
 import shutil
 from pathlib import Path
 
+# Forzar UTF-8 en stdout/stderr para que los emojis funcionen en Windows y Linux
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
+
 # Añadimos la ruta del proyecto web para poder importar sus módulos
 proyecto_dir = Path(os.path.abspath(__file__)).parent.parent.parent.parent.parent / 'proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web'
 sys.path.insert(0, str(proyecto_dir))
@@ -86,9 +93,10 @@ def main():
 
     print(f"\n{'='*60}")
     print(f"  MIGRADOR BD")
-    print(f"  Origen : {tipo_origen}  ←  {args.source}")
-    print(f"  Destino: {tipo_dest}  →  (motor export: {motor_export})")
+    print(f"  Origen : {tipo_origen}  <--  {args.source}")
+    print(f"  Destino: {tipo_dest}  -->  (motor export: {motor_export})")
     print(f"{'='*60}\n")
+
 
     # Carpeta de salida limpia (solo el archivo final, sin internos)
     output_dir = "output"

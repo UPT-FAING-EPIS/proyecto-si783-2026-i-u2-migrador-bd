@@ -45,15 +45,27 @@ jobs:
 
       - name: Ejecutar Script de Migración
         run: |
+          set -e
+          echo "📂 Directorio de trabajo: $(pwd)"
+          echo "📄 Archivos disponibles:"
+          ls -lh
+          echo ""
           python .agents/skills/migrador-bd/scripts/cli_migrator.py \
             --source "${{ github.event.inputs.archivo_origen }}" \
             --dest "${{ github.event.inputs.nombre_salida }}" \
             --tipo-dest "${{ github.event.inputs.tipo_destino }}"
 
-      - name: 📋 Mostrar archivos generados
+      - name: 📋 Verificar archivo generado
         run: |
-          echo "=== Archivo migrado generado ==="
-          ls -lh output/ 2>/dev/null || echo "No se generó archivo en output/"
+          echo "=== Contenido de output/ ==="
+          if [ -d "output" ]; then
+            ls -lh output/
+          else
+            echo "❌ La carpeta output/ no existe"
+            echo "Archivos en el directorio actual:"
+            find . -maxdepth 2 -type f -not -path '*/.git/*' | head -30
+            exit 1
+          fi
 
       - name: 📦 Descargar archivo migrado
         uses: actions/upload-artifact@v4
@@ -62,3 +74,4 @@ jobs:
           path: output/
           retention-days: 7
           if-no-files-found: error
+
