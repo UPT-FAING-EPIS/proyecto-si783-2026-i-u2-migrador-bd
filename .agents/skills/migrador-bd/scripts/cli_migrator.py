@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 # Añadimos la ruta del proyecto web para poder importar sus módulos
-proyecto_dir = Path(os.path.abspath(__file__)).parent.parent.parent.parent / 'proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web'
+proyecto_dir = Path(os.path.abspath(__file__)).parent.parent.parent.parent.parent / 'proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web'
 sys.path.insert(0, str(proyecto_dir))
 
 try:
