@@ -71,8 +71,18 @@ def main():
 
     # Auto-detectar tipo de origen por extensión
     tipo_origen  = detectar_tipo_origen(args.source)
-    tipo_dest    = TIPO_ORIGEN_MAP.get(args.tipo_dest.lower().replace(' ', ''),   args.tipo_dest)
+
+    DEST_MAP = {
+        'sqlite': 'SQLite', 'mysql': 'MySQL', 'postgres': 'PostgreSQL',
+        'postgresql': 'PostgreSQL', 'sql': 'SQL Generico',
+        'sqlserver': 'Microsoft SQL Server', 'mssql': 'Microsoft SQL Server',
+        'oracle': 'Oracle', 'mongodb': 'MongoDB', 'mongo': 'MongoDB',
+        'elasticsearch': 'Elasticsearch', 'elastic': 'Elasticsearch',
+        'cassandra': 'Cassandra', 'redis': 'Redis',
+    }
+    tipo_dest    = DEST_MAP.get(args.tipo_dest.lower().replace(' ', ''), args.tipo_dest)
     motor_export = EXPORT_MOTOR_MAP.get(tipo_dest, tipo_dest.lower())
+
 
     print(f"\n{'='*60}")
     print(f"  MIGRADOR BD")
