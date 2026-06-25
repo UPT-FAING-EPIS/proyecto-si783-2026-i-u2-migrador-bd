@@ -42,3 +42,14 @@ jobs:
       - name: Ejecutar Script de Migración
         run: |
           python .agents/skills/migrador-bd/scripts/cli_migrator.py --source "${{ github.event.inputs.origen_bd }}" --dest "${{ github.event.inputs.destino_bd }}" --tipo-origen "${{ github.event.inputs.tipo_origen }}" --tipo-dest "${{ github.event.inputs.tipo_destino }}"
+          echo "✅ Migración ejecutada. Buscando archivo generado..."
+          find . -name "*.db" -newer test.sqlite 2>/dev/null || true
+          ls -lh proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/uploads/ 2>/dev/null || echo "Carpeta uploads vacía o no existe"
+
+      - name: 📦 Subir archivo migrado como descargable
+        uses: actions/upload-artifact@v4
+        with:
+          name: base-de-datos-migrada
+          path: proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/uploads/
+          retention-days: 7
+          if-no-files-found: warn
