@@ -73,7 +73,7 @@ def main():
 
         # 3. Crear la estructura (tablas vacías) en el destino
         print("Creando estructura en el destino...")
-        destino.crear_estructura(esquema)
+        destino.crear_estructura(esquema, origen.tabla_a_esquema)
 
         # 4. Migrar datos tabla por tabla usando chunks
         print("Cargando datos tabla por tabla...")
@@ -83,7 +83,7 @@ def main():
             for chunk in origen.extraer_datos_chunked(tabla):
                 if not chunk.empty:
                     chunk_limpio = MapeadorDatos.limpiar_dataframe(chunk)
-                    destino.cargar_tabla(tabla, chunk_limpio, esquema)
+                    destino.cargar_tabla(tabla, chunk_limpio)
                     filas_tabla += len(chunk_limpio)
                     total_filas += len(chunk_limpio)
             print(f"  → {tabla}: {filas_tabla} fila(s) migradas")
