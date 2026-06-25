@@ -122,6 +122,16 @@ def main():
         # ── PASO 2: Crear estructura en destino ──────────────────
         print(f"\n[2/4] Preparando destino ({tipo_dest})...")
         destino = CargadorDestino(motor_destino=tipo_dest)
+
+        # IMPORTANTE: Borrar el archivo SQLite interno de corridas anteriores
+        # para evitar que acumule datos de migraciones previas
+        if os.path.exists(destino.ruta_salida):
+            os.remove(destino.ruta_salida)
+            # Recrear el engine apuntando al archivo limpio
+            from sqlalchemy import create_engine as _ce
+            destino.engine = _ce(f"sqlite:///{destino.ruta_salida}")
+            print(f"      🔄 BD interna reiniciada (limpia)")
+
         destino.tabla_a_esquema = origen.tabla_a_esquema
         destino.crear_estructura(esquema, origen.tabla_a_esquema)
 
@@ -132,6 +142,7 @@ def main():
         if origen.funciones:     destino.crear_funciones(origen.funciones)
         if origen.indices:       destino.crear_indices(origen.indices)
         print("      ✅ Estructura creada")
+
 
         # ── PASO 3: Migrar datos ─────────────────────────────────
         print(f"\n[3/4] Migrando datos ({len(tablas)} tabla(s))...")
