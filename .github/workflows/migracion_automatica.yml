@@ -28,6 +28,9 @@ on:
 jobs:
   migrar:
     runs-on: ubuntu-latest
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Descargar el código del repositorio
@@ -45,27 +48,20 @@ jobs:
 
       - name: Ejecutar Script de Migración
         run: |
-          set -e
-          echo "📂 Directorio de trabajo: $(pwd)"
-          echo "📄 Archivos disponibles:"
+          echo "=== Archivos en el directorio ==="
           ls -lh
           echo ""
-          python .agents/skills/migrador-bd/scripts/cli_migrator.py \
+          echo "=== Ejecutando migracion ==="
+          python -u .agents/skills/migrador-bd/scripts/cli_migrator.py \
             --source "${{ github.event.inputs.archivo_origen }}" \
             --dest "${{ github.event.inputs.nombre_salida }}" \
             --tipo-dest "${{ github.event.inputs.tipo_destino }}"
-
-      - name: 📋 Verificar archivo generado
-        run: |
-          echo "=== Contenido de output/ ==="
-          if [ -d "output" ]; then
-            ls -lh output/
-          else
-            echo "❌ La carpeta output/ no existe"
-            echo "Archivos en el directorio actual:"
-            find . -maxdepth 2 -type f -not -path '*/.git/*' | head -30
-            exit 1
-          fi
+          echo ""
+          echo "=== Estado despues de migrar ==="
+          echo "Carpeta output/:"
+          ls -lhR output/ 2>/dev/null || echo "(output/ no existe)"
+          echo "Uploads internos:"
+          ls -lh proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/uploads/ 2>/dev/null || echo "(uploads/ vacio)"
 
       - name: 📦 Descargar archivo migrado
         uses: actions/upload-artifact@v4
@@ -74,4 +70,3 @@ jobs:
           path: output/
           retention-days: 7
           if-no-files-found: error
-
