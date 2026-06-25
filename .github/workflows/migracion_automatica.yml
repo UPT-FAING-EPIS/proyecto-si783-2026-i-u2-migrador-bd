@@ -50,6 +50,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: base-de-datos-migrada
-          path: proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/uploads/
+          path: |
+            ${{ github.event.inputs.destino_bd }}*
+            proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/uploads/
           retention-days: 7
           if-no-files-found: warn
