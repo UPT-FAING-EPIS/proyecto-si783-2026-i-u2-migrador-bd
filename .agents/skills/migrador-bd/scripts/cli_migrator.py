@@ -23,6 +23,90 @@ except ImportError as e:
     print(f"Error importando módulos del proyecto: {e}")
     sys.exit(1)
 
+import re
+
+# ─── Conversión DDL directa para fuentes SQL ──────────────────────────────────
+# Cuando el origen es un .sql (SQL Server, MySQL, etc.), los datos estructurales
+# no pasan por el SQLite interno. Hacemos conversión de dialecto directamente.
+
+SQLSERVER_TO_POSTGRES = [
+    # AUTO-INCREMENT
+    (r'\bINT\s+IDENTITY\s*\(\s*\d+\s*,\s*\d+\s*\)',  'SERIAL',          re.IGNORECASE),
+    (r'\bBIGINT\s+IDENTITY\s*\(\s*\d+\s*,\s*\d+\s*\)', 'BIGSERIAL',     re.IGNORECASE),
+    # Tipos
+    (r'\bNVARCHAR\s*\((\d+)\)',                         r'VARCHAR(\1)',   re.IGNORECASE),
+    (r'\bNVARCHAR\s*\(MAX\)',                            'TEXT',           re.IGNORECASE),
+    (r'\bNTEXT\b',                                       'TEXT',           re.IGNORECASE),
+    (r'\bDATETIME\b',                                    'TIMESTAMP',      re.IGNORECASE),
+    (r'\bSMALLDATETIME\b',                               'TIMESTAMP',      re.IGNORECASE),
+    (r'\bDATETIME2\b',                                   'TIMESTAMP',      re.IGNORECASE),
+    (r'\bBIT\b',                                         'BOOLEAN',        re.IGNORECASE),
+    (r'\bMONEY\b',                                       'NUMERIC(19,4)',  re.IGNORECASE),
+    (r'\bUNIQUEIDENTIFIER\b',                            'UUID',           re.IGNORECASE),
+    (r'\bIMAGE\b',                                       'BYTEA',          re.IGNORECASE),
+    (r'\bVARBINARY\s*\(MAX\)',                            'BYTEA',          re.IGNORECASE),
+    # Funciones
+    (r'\bGETDATE\s*\(\)',                                'CURRENT_TIMESTAMP', re.IGNORECASE),
+    (r'\bGETUTCDATE\s*\(\)',                             'NOW()',           re.IGNORECASE),
+    (r'\bNEWID\s*\(\)',                                  'gen_random_uuid()', re.IGNORECASE),
+    # Sintaxis SQL Server
+    (r'\bGO\b\s*',                                       '',               re.IGNORECASE),
+    (r'\[([^\]]+)\]',                                    r'"\1"',          0),   # [col] → "col"
+]
+
+SQLSERVER_TO_MYSQL = [
+    (r'\bINT\s+IDENTITY\s*\(\s*\d+\s*,\s*\d+\s*\)',    'INT AUTO_INCREMENT', re.IGNORECASE),
+    (r'\bBIGINT\s+IDENTITY\s*\(\s*\d+\s*,\s*\d+\s*\)', 'BIGINT AUTO_INCREMENT', re.IGNORECASE),
+    (r'\bNVARCHAR\s*\((\d+)\)',                          r'VARCHAR(\1)',    re.IGNORECASE),
+    (r'\bNVARCHAR\s*\(MAX\)',                             'LONGTEXT',        re.IGNORECASE),
+    (r'\bNTEXT\b',                                        'LONGTEXT',        re.IGNORECASE),
+    (r'\bDATETIME2\b',                                    'DATETIME',        re.IGNORECASE),
+    (r'\bBIT\b',                                          'TINYINT(1)',       re.IGNORECASE),
+    (r'\bMONEY\b',                                        'DECIMAL(19,4)',    re.IGNORECASE),
+    (r'\bUNIQUEIDENTIFIER\b',                             'CHAR(36)',         re.IGNORECASE),
+    (r'\bIMAGE\b',                                        'LONGBLOB',         re.IGNORECASE),
+    (r'\bGETDATE\s*\(\)',                                  'NOW()',            re.IGNORECASE),
+    (r'\bGO\b\s*',                                         '',                re.IGNORECASE),
+    (r'\[([^\]]+)\]',                                      r'`\1`',           0),
+    (r'\bCREATE DATABASE\b',                               'CREATE DATABASE IF NOT EXISTS', re.IGNORECASE),
+]
+
+REMOVE_LINES_PATTERNS = [
+    re.compile(r'^\s*USE\s+\w+\s*;?\s*$', re.IGNORECASE),
+]
+
+def convertir_sql_directo(contenido: str, motor_destino: str) -> str:
+    """Convierte DDL SQL Server al dialecto de destino directamente (sin SQLite interno)."""
+    reglas = []
+    header_motor = motor_destino.upper()
+
+    if 'postgres' in motor_destino.lower():
+        reglas = SQLSERVER_TO_POSTGRES
+    elif 'mysql' in motor_destino.lower():
+        reglas = SQLSERVER_TO_MYSQL
+    else:
+        # Para otros motores, solo limpiamos GO y sintaxis básica
+        reglas = [(r'\bGO\b\s*', '', re.IGNORECASE), (r'\[([^\]]+)\]', r'"\1"', 0)]
+
+    resultado = contenido
+    for patron, reemplazo, *flags in reglas:
+        flag = flags[0] if flags else 0
+        resultado = re.sub(patron, reemplazo, resultado, flags=flag)
+
+    # Eliminar líneas USE database;
+    lineas = resultado.splitlines()
+    lineas = [l for l in lineas if not any(p.match(l) for p in REMOVE_LINES_PATTERNS)]
+    resultado = '\n'.join(lineas)
+
+    header = (
+        f"-- SQL Export generado por MigradorBD\n"
+        f"-- Origen: SQL Server  -->  Destino: {header_motor}\n"
+        f"-- Conversion automatica de dialectos\n\n"
+    )
+    return header + resultado
+
+
+
 # Mapeo extensión → tipo de BD origen (auto-detección)
 EXT_ORIGEN_MAP = {
     '.sqlite': 'SQLite',
@@ -103,6 +187,28 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     try:
+        # ── INTERCEPCIÓN PARA ORÍGENES SQL DIRECTOS ───────────────
+        if tipo_origen == 'SQL Generico' and os.path.isfile(args.source):
+            print("[1/1] Detectado origen SQL. Realizando conversión de dialecto directa...")
+            with open(args.source, 'r', encoding='utf-8') as f:
+                contenido_sql = f.read()
+
+            resultado = convertir_sql_directo(contenido_sql, tipo_dest)
+            ext = '.sql' if tipo_dest not in ['MongoDB', 'Elasticsearch', 'Redis'] else '.txt'
+
+            nombre_base = Path(args.dest).stem
+            nombre_salida = os.path.join(output_dir, f"{nombre_base}{ext}")
+
+            with open(nombre_salida, 'w', encoding='utf-8') as f:
+                f.write(resultado)
+
+            print(f"\n{'='*60}")
+            print(f"  ✅ CONVERSIÓN DDL COMPLETADA")
+            print(f"     Formato de salida    : {tipo_dest}")
+            print(f"     📄 Archivo generado  : {nombre_salida}")
+            print(f"{'='*60}\n")
+            sys.exit(0)
+
         # ── PASO 1: Extracción ───────────────────────────────────
         print("[1/4] Conectando al origen y descubriendo estructura...")
         origen = ConectorOrigen(ruta=args.source, tipo=tipo_origen)
