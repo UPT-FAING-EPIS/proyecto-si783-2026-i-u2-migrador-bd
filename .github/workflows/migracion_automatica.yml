@@ -37,6 +37,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/requirements.txt ]; then pip install -r proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/requirements.txt; fi
+          if [ -f proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/requirements_web.txt ]; then pip install -r proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/requirements_web.txt; fi
 
       - name: Ejecutar Script de Migración
         run: |
