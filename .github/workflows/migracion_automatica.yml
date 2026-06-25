@@ -1,0 +1,43 @@
+name: Ejecutar Migración de BD
+
+on:
+  workflow_dispatch:
+    inputs:
+      origen_bd:
+        description: 'Ruta o conexión de origen'
+        required: true
+        default: 'datos/origen.sqlite'
+      tipo_origen:
+        description: 'Tipo de base de datos origen (sqlite, postgres, mysql)'
+        required: true
+        default: 'sqlite'
+      destino_bd:
+        description: 'Ruta o conexión de destino'
+        required: true
+        default: 'datos/destino.sqlite'
+      tipo_destino:
+        description: 'Tipo de base de datos destino (sqlite, postgres, mysql)'
+        required: true
+        default: 'sqlite'
+
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/requirements.txt ]; then pip install -r proyecto-si783-2026-i-u1-migrador-de-bd-codigo-web/requirements.txt; fi
+
+      - name: Ejecutar Script de Migración
+        run: |
+          python .agents/skills/migrador-bd/scripts/cli_migrator.py --source "${{ github.event.inputs.origen_bd }}" --dest "${{ github.event.inputs.destino_bd }}" --tipo-origen "${{ github.event.inputs.tipo_origen }}" --tipo-dest "${{ github.event.inputs.tipo_destino }}"
