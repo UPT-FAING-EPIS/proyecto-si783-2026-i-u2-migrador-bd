@@ -17,22 +17,22 @@ except ImportError as e:
 
 # Mapeo de nombre corto al nombre exacto que espera el proyecto
 TIPO_MAP = {
-    'sqlite':    'SQLite',
-    'mysql':     'MySQL',
-    'postgres':  'PostgreSQL',
-    'postgresql':'PostgreSQL',
-    'sql':       'SQL Generico',
-    'mssql':     'Microsoft SQL Server',
-    'oracle':    'Oracle',
-    'csv':       'CSV',
-    'excel':     'Excel',
-    'mongodb':   'MongoDB',
+    'sqlite':     'SQLite',
+    'mysql':      'MySQL',
+    'postgres':   'PostgreSQL',
+    'postgresql': 'PostgreSQL',
+    'sql':        'SQL Generico',
+    'mssql':      'Microsoft SQL Server',
+    'oracle':     'Oracle',
+    'csv':        'CSV',
+    'excel':      'Excel',
+    'mongodb':    'MongoDB',
 }
 
 def main():
     parser = argparse.ArgumentParser(description="CLI Migrador BD para la Skill IA")
     parser.add_argument("--source",      required=True, help="Ruta o conexión de origen")
-    parser.add_argument("--dest",        required=True, help="Ruta o conexión de destino")
+    parser.add_argument("--dest",        required=True, help="Ruta o conexión de destino (nombre del archivo de salida)")
     parser.add_argument("--tipo-origen", required=True, help="Tipo de BD origen (sqlite, mysql, postgres...)")
     parser.add_argument("--tipo-dest",   required=True, help="Tipo de BD destino (sqlite, mysql, postgres...)")
     args = parser.parse_args()
@@ -46,34 +46,53 @@ def main():
         # 1. Extracción: crear el conector y descubrir tablas
         print("Conectando al origen y descubriendo tablas...")
         origen = ConectorOrigen(ruta=args.source, tipo=tipo_origen)
-        tablas = origen.tablas          # Las tablas se descubren en __init__
+        tablas  = origen.tablas    # Las tablas se auto-descubren en __init__
         esquema = origen.esquema
         print(f"✅ Tablas encontradas ({len(tablas)}): {tablas}")
 
         if not tablas:
-            print("⚠️  No se encontraron tablas en el origen. Verifica el archivo/conexión.")
+            print("⚠️  No se encontraron tablas. Verifica el archivo/conexión de origen.")
             sys.exit(0)
 
-        # 2. Mapeo de tipos
-        print("Mapeando tipos de datos...")
-        mapeador = MapeadorDatos(esquema=esquema, tipo_origen=tipo_origen, tipo_destino=tipo_dest)
-        esquema_mapeado = mapeador.mapear()
+        # 2. Carga en destino (CargadorDestino solo recibe el tipo de motor)
+        print(f"Conectando al destino ({tipo_dest})...")
+        destino = CargadorDestino(motor_destino=tipo_dest)
+        destino.tabla_a_esquema = origen.tabla_a_esquema
 
-        # 3. Carga en destino
-        print("Creando estructura en destino...")
-        destino = CargadorDestino(ruta=args.dest, tipo=tipo_dest)
-        destino.crear_estructura(esquema_mapeado)
+        # Pasar objetos extra si existen (vistas, triggers, etc.)
+        if origen.vistas:
+            destino._stored_objs["vistas"] = origen.vistas
+        if origen.triggers:
+            destino._stored_objs["triggers"] = origen.triggers
+        if origen.procedimientos:
+            destino._stored_objs["procedimientos"] = origen.procedimientos
+        if origen.funciones:
+            destino._stored_objs["funciones"] = origen.funciones
+        if origen.indices:
+            destino._stored_objs["indices"] = origen.indices
 
+        # 3. Crear la estructura (tablas vacías) en el destino
+        print("Creando estructura en el destino...")
+        destino.crear_estructura(esquema)
+
+        # 4. Migrar datos tabla por tabla usando chunks
         print("Cargando datos tabla por tabla...")
         total_filas = 0
         for tabla in tablas:
+            filas_tabla = 0
             for chunk in origen.extraer_datos_chunked(tabla):
                 if not chunk.empty:
-                    destino.cargar_tabla(tabla, chunk, esquema_mapeado)
-                    total_filas += len(chunk)
-                    print(f"  → {tabla}: {len(chunk)} fila(s) migradas")
+                    chunk_limpio = MapeadorDatos.limpiar_dataframe(chunk)
+                    destino.cargar_tabla(tabla, chunk_limpio, esquema)
+                    filas_tabla += len(chunk_limpio)
+                    total_filas += len(chunk_limpio)
+            print(f"  → {tabla}: {filas_tabla} fila(s) migradas")
 
-        print(f"\n✅ Migración completada. Total filas migradas: {total_filas}")
+        # 5. Exportar resultado final
+        ruta_salida = destino.get_ruta_salida() if hasattr(destino, 'get_ruta_salida') else destino.ruta_salida
+        print(f"\n✅ Migración completada exitosamente.")
+        print(f"   Total filas migradas: {total_filas}")
+        print(f"   Archivo de salida generado en: {ruta_salida}")
 
     except Exception as e:
         print(f"Error durante la migración: {e}")
