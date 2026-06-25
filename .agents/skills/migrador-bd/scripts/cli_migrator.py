@@ -16,77 +16,98 @@ except ImportError as e:
     print(f"Error importando módulos del proyecto: {e}")
     sys.exit(1)
 
-# Mapeo de nombre corto al nombre EXACTO que espera el proyecto
-TIPO_MAP = {
-    'sqlite':      'SQLite',
-    'mysql':       'MySQL',
-    'postgres':    'PostgreSQL',
-    'postgresql':  'PostgreSQL',
-    'sql':         'SQL Generico',
-    'sqlgenerico': 'SQL Generico',
-    'mssql':       'Microsoft SQL Server',
-    'sqlserver':   'Microsoft SQL Server',
-    'oracle':      'Oracle',
-    'csv':         'CSV',
-    'excel':       'Excel',
-    'mongodb':     'MongoDB',
-    'mongo':       'MongoDB',
+# Mapeo de nombre corto → nombre interno del proyecto (para ConectorOrigen / CargadorDestino)
+TIPO_ORIGEN_MAP = {
+    'sqlite':        'SQLite',
+    'mysql':         'MySQL',
+    'postgres':      'PostgreSQL',
+    'postgresql':    'PostgreSQL',
+    'sql':           'SQL Generico',
+    'sqlserver':     'Microsoft SQL Server',
+    'mssql':         'Microsoft SQL Server',
+    'oracle':        'Oracle',
+    'csv':           'CSV',
+    'excel':         'Excel',
+    'mongodb':       'MongoDB',
+    'mongo':         'MongoDB',
     'elasticsearch': 'Elasticsearch',
-    'elastic':     'Elasticsearch',
-    'cassandra':   'Cassandra',
-    'redis':       'Redis',
+    'elastic':       'Elasticsearch',
+    'cassandra':     'Cassandra',
+    'redis':         'Redis',
+}
+
+# Mapeo de nombre corto → string que usa generar_export() internamente
+# generar_export() comprueba subcadenas en motor.lower()
+EXPORT_MOTOR_MAP = {
+    'SQLite':                 'sqlite',
+    'MySQL':                  'mysql',
+    'PostgreSQL':             'postgres',
+    'SQL Generico':           'mysql',       # Produce SQL ANSI usando rama mysql
+    'Microsoft SQL Server':   'sql server',
+    'Oracle':                 'oracle',
+    'MongoDB':                'mongodb',
+    'Elasticsearch':          'elasticsearch',
+    'Cassandra':              'cassandra',
+    'Redis':                  'redis',
+    # por si el usuario escribe directamente
+    'CSV':                    'sqlite',
+    'Excel':                  'sqlite',
 }
 
 def main():
     parser = argparse.ArgumentParser(description="CLI Migrador BD - Skill IA")
     parser.add_argument("--source",      required=True, help="Ruta o conexión de origen")
-    parser.add_argument("--dest",        required=True, help="Nombre del archivo de salida")
-    parser.add_argument("--tipo-origen", required=True, help="Tipo de BD origen (sqlite, mysql, postgres, csv, excel, mongodb...)")
-    parser.add_argument("--tipo-dest",   required=True, help="Tipo de BD destino (sqlite, mysql, postgres, mongodb, redis...)")
+    parser.add_argument("--dest",        required=True, help="Nombre base del archivo de salida (sin extensión)")
+    parser.add_argument("--tipo-origen", required=True, help="Tipo BD origen: sqlite, mysql, postgres, csv, excel, mongodb, redis, cassandra, elasticsearch")
+    parser.add_argument("--tipo-dest",   required=True, help="Tipo BD destino: sqlite, mysql, postgres, mongodb, redis, cassandra, elasticsearch")
     args = parser.parse_args()
 
-    tipo_origen = TIPO_MAP.get(args.tipo_origen.lower().replace(' ', ''), args.tipo_origen)
-    tipo_dest   = TIPO_MAP.get(args.tipo_dest.lower().replace(' ', ''),   args.tipo_dest)
+    tipo_origen  = TIPO_ORIGEN_MAP.get(args.tipo_origen.lower().replace(' ', ''), args.tipo_origen)
+    tipo_dest    = TIPO_ORIGEN_MAP.get(args.tipo_dest.lower().replace(' ', ''),   args.tipo_dest)
+    motor_export = EXPORT_MOTOR_MAP.get(tipo_dest, tipo_dest.lower())
 
-    print(f"\n{'='*55}")
-    print(f"  MIGRADOR BD - Inicio de migración")
-    print(f"  Origen : {tipo_origen}  →  {args.source}")
-    print(f"  Destino: {tipo_dest}  →  {args.dest}")
-    print(f"{'='*55}\n")
+    print(f"\n{'='*60}")
+    print(f"  MIGRADOR BD")
+    print(f"  Origen : {tipo_origen}  ←  {args.source}")
+    print(f"  Destino: {tipo_dest}  →  (motor export: {motor_export})")
+    print(f"{'='*60}\n")
+
+    # Carpeta de salida limpia (solo el archivo final, sin internos)
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
 
     try:
-        # ── PASO 1: Extracción ──────────────────────────────────
+        # ── PASO 1: Extracción ───────────────────────────────────
         print("[1/4] Conectando al origen y descubriendo estructura...")
         origen = ConectorOrigen(ruta=args.source, tipo=tipo_origen)
         tablas  = origen.tablas
         esquema = origen.esquema
-        print(f"      ✅ Tablas encontradas ({len(tablas)}): {tablas}")
-        if origen.vistas:
-            print(f"      ✅ Vistas encontradas: {len(origen.vistas)}")
-        if origen.triggers:
-            print(f"      ✅ Triggers encontrados: {len(origen.triggers)}")
-        if origen.procedimientos:
-            print(f"      ✅ Procedimientos encontrados: {len(origen.procedimientos)}")
+        print(f"      ✅ Tablas ({len(tablas)}): {tablas}")
+        if origen.vistas:        print(f"      ✅ Vistas: {len(origen.vistas)}")
+        if origen.triggers:      print(f"      ✅ Triggers: {len(origen.triggers)}")
+        if origen.procedimientos:print(f"      ✅ Procedimientos: {len(origen.procedimientos)}")
+        if origen.funciones:     print(f"      ✅ Funciones: {len(origen.funciones)}")
+        if origen.indices:       print(f"      ✅ Índices: {len(origen.indices)}")
 
         if not tablas:
             print("      ⚠️  No se encontraron tablas. Verifica el archivo/conexión de origen.")
             sys.exit(0)
 
-        # ── PASO 2: Crear estructura en destino ─────────────────
-        print(f"\n[2/4] Creando estructura en destino ({tipo_dest})...")
+        # ── PASO 2: Crear estructura en destino ──────────────────
+        print(f"\n[2/4] Preparando destino ({tipo_dest})...")
         destino = CargadorDestino(motor_destino=tipo_dest)
         destino.tabla_a_esquema = origen.tabla_a_esquema
         destino.crear_estructura(esquema, origen.tabla_a_esquema)
 
-        # Registrar objetos especiales (vistas, triggers, procs, funciones, índices)
+        # Registrar objetos especiales
         if origen.vistas:        destino.crear_vistas(origen.vistas)
         if origen.triggers:      destino.crear_triggers(origen.triggers)
-        if origen.procedimientos: destino.crear_procedimientos(origen.procedimientos)
+        if origen.procedimientos:destino.crear_procedimientos(origen.procedimientos)
         if origen.funciones:     destino.crear_funciones(origen.funciones)
         if origen.indices:       destino.crear_indices(origen.indices)
         print("      ✅ Estructura creada")
 
-        # ── PASO 3: Cargar datos tabla por tabla ────────────────
+        # ── PASO 3: Migrar datos ─────────────────────────────────
         print(f"\n[3/4] Migrando datos ({len(tablas)} tabla(s))...")
         total_filas = 0
         errores = []
@@ -102,41 +123,44 @@ def main():
                 print(f"      → {tabla}: {filas_tabla} fila(s)")
             except Exception as e_tabla:
                 errores.append(f"{tabla}: {e_tabla}")
-                print(f"      ⚠️  Error en tabla {tabla}: {e_tabla}")
+                print(f"      ⚠️  Error en {tabla}: {e_tabla}")
 
-        # ── PASO 4: Exportar al formato final del destino ───────
-        print(f"\n[4/4] Exportando al formato {tipo_dest}...")
-        resultado, ext, mimetype, es_binario = destino.generar_export(tipo_dest)
+        # ── PASO 4: Exportar al formato correcto del destino ─────
+        print(f"\n[4/4] Exportando formato {motor_export.upper()}...")
+        resultado, ext, mimetype, es_binario = destino.generar_export(motor_export)
 
         if not resultado:
-            print("      ❌ Error: No se generó ningún archivo de exportación.")
+            print("      ❌ Error: No se generó ningún archivo.")
             sys.exit(1)
 
-        # Guardar en el directorio actual con el nombre que el usuario pidió
-        nombre_salida = args.dest if args.dest.endswith(ext) else f"{args.dest}{ext}"
+        # Nombre limpio sin doble extensión
+        nombre_base = Path(args.dest).stem   # quita extensión si ya tenía una
+        nombre_salida = os.path.join(output_dir, f"{nombre_base}{ext}")
+
         if es_binario:
-            # Es un archivo binario (ej: .db SQLite) — copiarlo al directorio actual
+            # Archivo binario (SQLite .db) — copiar
             if os.path.exists(resultado):
                 shutil.copy2(resultado, nombre_salida)
         else:
-            # Es texto (SQL, JSON, CQL, etc.) — escribirlo directamente
+            # Texto (SQL, JSON, CQL, Redis) — escribir correctamente codificado
             with open(nombre_salida, 'w', encoding='utf-8') as f:
                 f.write(resultado)
 
-        print(f"\n{'='*55}")
-        print(f"  ✅ Migración completada")
+        print(f"\n{'='*60}")
+        print(f"  ✅ MIGRACIÓN COMPLETADA")
         print(f"     Total filas migradas : {total_filas}")
         print(f"     Errores              : {len(errores)}")
-        print(f"     Archivo de salida    : {nombre_salida}  ({mimetype})")
-        print(f"{'='*55}\n")
+        print(f"     Formato de salida    : {mimetype}")
+        print(f"     📄 Archivo generado  : {nombre_salida}")
+        print(f"{'='*60}\n")
 
         if errores:
-            print("Detalles de errores:")
+            print("Detalle de errores:")
             for e in errores:
                 print(f"  - {e}")
 
     except Exception as e:
-        print(f"\n❌ Error fatal durante la migración: {e}")
+        print(f"\n❌ Error fatal: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
