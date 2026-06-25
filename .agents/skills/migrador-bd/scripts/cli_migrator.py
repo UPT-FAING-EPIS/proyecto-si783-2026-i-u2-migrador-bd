@@ -16,25 +16,33 @@ except ImportError as e:
     print(f"Error importando módulos del proyecto: {e}")
     sys.exit(1)
 
-# Mapeo de nombre corto → nombre interno del proyecto (para ConectorOrigen / CargadorDestino)
-TIPO_ORIGEN_MAP = {
-    'sqlite':        'SQLite',
-    'mysql':         'MySQL',
-    'postgres':      'PostgreSQL',
-    'postgresql':    'PostgreSQL',
-    'sql':           'SQL Generico',
-    'sqlserver':     'Microsoft SQL Server',
-    'mssql':         'Microsoft SQL Server',
-    'oracle':        'Oracle',
-    'csv':           'CSV',
-    'excel':         'Excel',
-    'mongodb':       'MongoDB',
-    'mongo':         'MongoDB',
-    'elasticsearch': 'Elasticsearch',
-    'elastic':       'Elasticsearch',
-    'cassandra':     'Cassandra',
-    'redis':         'Redis',
+# Mapeo extensión → tipo de BD origen (auto-detección)
+EXT_ORIGEN_MAP = {
+    '.sqlite': 'SQLite',
+    '.db':     'SQLite',
+    '.sql':    'SQL Generico',
+    '.csv':    'CSV',
+    '.xlsx':   'Excel',
+    '.xls':    'Excel',
+    '.json':   'MongoDB',
+    '.bson':   'MongoDB',
 }
+
+def detectar_tipo_origen(ruta: str) -> str:
+    """Detecta automáticamente el tipo de BD por la extensión del archivo."""
+    ext = Path(ruta).suffix.lower()
+    tipo = EXT_ORIGEN_MAP.get(ext)
+    if tipo:
+        return tipo
+    # Si no tiene extensión conocida, intenta por nombre de host (conexión remota)
+    ruta_l = ruta.lower()
+    if 'mysql' in ruta_l or '3306' in ruta_l:       return 'MySQL'
+    if 'postgres' in ruta_l or '5432' in ruta_l:    return 'PostgreSQL'
+    if 'mongo' in ruta_l or '27017' in ruta_l:      return 'MongoDB'
+    if 'redis' in ruta_l or '6379' in ruta_l:       return 'Redis'
+    if 'elastic' in ruta_l or '9200' in ruta_l:     return 'Elasticsearch'
+    return 'SQLite'  # fallback seguro
+
 
 # Mapeo de nombre corto → string que usa generar_export() internamente
 # generar_export() comprueba subcadenas en motor.lower()
@@ -58,11 +66,11 @@ def main():
     parser = argparse.ArgumentParser(description="CLI Migrador BD - Skill IA")
     parser.add_argument("--source",      required=True, help="Ruta o conexión de origen")
     parser.add_argument("--dest",        required=True, help="Nombre base del archivo de salida (sin extensión)")
-    parser.add_argument("--tipo-origen", required=True, help="Tipo BD origen: sqlite, mysql, postgres, csv, excel, mongodb, redis, cassandra, elasticsearch")
     parser.add_argument("--tipo-dest",   required=True, help="Tipo BD destino: sqlite, mysql, postgres, mongodb, redis, cassandra, elasticsearch")
     args = parser.parse_args()
 
-    tipo_origen  = TIPO_ORIGEN_MAP.get(args.tipo_origen.lower().replace(' ', ''), args.tipo_origen)
+    # Auto-detectar tipo de origen por extensión
+    tipo_origen  = detectar_tipo_origen(args.source)
     tipo_dest    = TIPO_ORIGEN_MAP.get(args.tipo_dest.lower().replace(' ', ''),   args.tipo_dest)
     motor_export = EXPORT_MOTOR_MAP.get(tipo_dest, tipo_dest.lower())
 
