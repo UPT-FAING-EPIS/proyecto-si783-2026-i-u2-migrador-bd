@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "generator": "MigradorBD",
+    "timestamp": "2026-06-25T14:26:34.280375",
+    "motor": "MongoDB"
+  },
+  "collections": {
+    "public_usuarios": [
+      {
+        "id": 1,
+        "nombre": "Juan Perez",
+        "email": "juan@ejemplo.com"
+      },
+      {
+        "id": 2,
+        "nombre": "Maria Lopez",
+        "email": "maria@ejemplo.com"
+      }
+    ]
+  },
+  "objects": {
+    "vistas": [],
+    "triggers": [],
+    "procedimientos": [],
+    "funciones": [],
+    "indices": []
+  }
+}

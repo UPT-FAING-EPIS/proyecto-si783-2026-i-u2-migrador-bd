@@ -27,6 +27,11 @@ Cuando el usuario te pida "ejecutar una migración", "migrar la base de datos", 
 3. **Verificación:**
    Una vez que el script finaliza, reporta el resultado al usuario, incluyendo la cantidad de tablas/registros insertados y posibles advertencias.
 
+4. **Instrucciones de Comportamiento (CRÍTICO):**
+   - **Actúa Rápido:** No sobre-analices ni requieras planes complejos de implementación para usar esta skill.
+   - **Ve directo al grano:** Ejecuta el comando inmediatamente tan pronto como tengas los parámetros necesarios.
+   - **Minimiza la charla:** Entrega el resultado final de manera concisa y directa.
+
 ## Entorno Virtual
 
 **Importante:** Antes de ejecutar cualquier script en Python de este proyecto, asegúrate de activar el entorno virtual y que las dependencias estén instaladas:
